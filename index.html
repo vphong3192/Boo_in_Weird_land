@@ -1,0 +1,2008 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boo - Lạc Vào Thế Giới Phép Thuật</title>
+    <style>
+        /* ================= CSS GIAO DIỆN ================= */
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Georgia', serif; /* Font có chân phong cách sách cổ */
+            background-color: #0a0a0a;
+            color: #333;
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh;
+        }
+
+        /* Container chính của Game */
+        .game-container {
+            display: flex; width: 90vw; max-width: 1200px; height: 85vh;
+            background-color: #2b2219; border: 4px solid #5c4a3d;
+            border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            overflow: hidden;
+        }
+
+        /* VÙNG BÊN TRÁI: VĂN BẢN (STORY) */
+        .main-panel {
+            flex: 7; background-color: #f4ecd8; padding: 30px;
+            display: flex; flex-direction: column; border-right: 4px solid #5c4a3d;
+            transition: background-color 0.2s;
+        }
+
+        .story-text {
+            flex-grow: 1; overflow-y: auto; font-size: 18px; line-height: 1.6;
+            margin-bottom: 12px; padding-right: 15px;
+        }
+        
+        /* Tùy chỉnh thanh cuộn */
+        .story-text::-webkit-scrollbar { width: 8px; }
+        .story-text::-webkit-scrollbar-thumb { background: #8c7355; border-radius: 4px; }
+
+        .room-title {
+            font-size: 26px; font-weight: bold; color: #61130d;
+            border-bottom: 2px dashed #8c7355; padding-bottom: 10px; margin-bottom: 20px;
+        }
+
+        .puzzle-box {
+            background-color: #e6dac3; padding: 15px; border-radius: 5px;
+            border-left: 5px solid #8c7355; font-style: italic; margin: 15px 0;
+        }
+
+        .choices-area { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+        .choice-btn {
+            background-color: #5c4a3d; color: #f4ecd8; border: none;
+            padding: 10px 12px; font-size: 14px; font-family: inherit;
+            cursor: pointer; border-radius: 5px; transition: 0.15s; text-align: left;
+        }
+        .choice-btn:hover { background-color: #8c7355; }
+        .choice-btn.action-btn { background-color: #2b5c2b; }
+        .choice-btn.action-btn:hover { background-color: #3d803d; }
+
+        /* VÙNG BÊN PHẢI: BẢNG CHỈ SỐ & HÌNH ẢNH */
+        .sidebar {
+            flex: 3; background-color: #31271f; color: #e0d5c1;
+            display: flex; flex-direction: column; padding: 15px;
+        }
+
+        .player-profile {
+            display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+            padding-bottom: 10px; border-bottom: 1px solid #5c4a3d;
+        }
+        .avatar {
+            width: 50px; height: 50px; background-color: #5c4a3d; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 26px; border: 2px solid #8c7355;
+        }
+        .player-name { font-size: 18px; font-weight: bold; color: #ffcc00; }
+
+        .save-load-btns {
+            display: flex; gap: 6px; margin-left: auto;
+        }
+        .save-load-btns button {
+            background-color: #44372c; color: #e0d5c1; border: 1px solid #5c4a3d;
+            padding: 4px 10px; font-size: 12px; font-family: inherit;
+            cursor: pointer; border-radius: 4px; transition: 0.15s;
+        }
+        .save-load-btns button:hover { background-color: #5c4a3d; color: #ffcc00; }
+
+        .stats-box { margin-bottom: 10px; font-size: 16px; }
+        .inventory-box { margin-bottom: 10px; flex-grow: 0; }
+        .inventory-list { list-style: none; padding: 0; margin: 0; }
+        .inventory-list li {
+            background-color: #44372c; padding: 5px 10px; margin-bottom: 4px;
+            border-radius: 4px; font-size: 13px;
+        }
+
+        .location-image-box {
+            width: 100%; height: 160px; background-color: #1a1510;
+            border: 2px solid #5c4a3d; border-radius: 5px;
+            display: flex; justify-content: center; align-items: center; margin-top: auto;
+            flex-shrink: 0;
+        }
+        .placeholder-img { font-size: 70px; }
+
+        /* Animation chớp đỏ khi mất máu */
+        @keyframes flashRed {
+            0% { background-color: #f4ecd8; }
+            50% { background-color: #ffcccc; }
+            100% { background-color: #f4ecd8; }
+        }
+        .damage-flash { animation: flashRed 0.5s ease; }
+
+        .mute-btn {
+            position: fixed; bottom: 20px; right: 20px;
+            width: 44px; height: 44px; background-color: #31271f;
+            border: 2px solid #5c4a3d; border-radius: 50%;
+            font-size: 22px; cursor: pointer; color: #e0d5c1;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 100; transition: 0.15s; user-select: none;
+        }
+        .mute-btn:hover { background-color: #5c4a3d; }
+        .mute-btn.muted { border-color: #8c3a3a; color: #8c3a3a; }
+
+        .map-btn {
+            position: fixed; top: 20px; right: 20px;
+            width: 52px; height: 52px; background-color: #31271f;
+            border: 2px solid #5c4a3d; border-radius: 10px;
+            font-size: 24px; cursor: pointer; color: #e0d5c1;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 100; transition: 0.15s; user-select: none;
+            font-family: 'Georgia', serif;
+        }
+        .map-btn:hover { background-color: #5c4a3d; border-color: #ffcc00; color: #ffcc00; }
+
+        .map-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.75); z-index: 200;
+            justify-content: center; align-items: center;
+        }
+        .map-overlay.open { display: flex; }
+
+        .map-panel {
+            background-color: #2b2219; border: 3px solid #5c4a3d;
+            border-radius: 10px; padding: 25px; width: 660px; height: 520px;
+            position: relative; box-shadow: 0 0 30px rgba(0,0,0,0.9);
+            display: flex; flex-direction: column;
+        }
+        .map-title {
+            font-size: 22px; font-weight: bold; color: #ffcc00;
+            text-align: center; margin-bottom: 15px; font-family: 'Georgia', serif;
+            flex-shrink: 0;
+        }
+        .map-close {
+            position: absolute; top: 12px; right: 18px; z-index: 20;
+            background: none; border: none; color: #e0d5c1;
+            font-size: 26px; cursor: pointer; font-family: inherit;
+            transition: 0.15s;
+        }
+        .map-close:hover { color: #ffcc00; }
+
+        .map-area {
+            width: 100%; flex: 1; min-height: 0; position: relative;
+            background-color: #1a1510; border: 1px solid #44372c;
+            border-radius: 5px; overflow: hidden;
+        }
+        .map-area svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+        .map-node {
+            position: absolute; transform: translate(-50%, -50%);
+            width: 28px; height: 28px; background-color: #5c4a3d;
+            border: 2px solid #8c7355; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 14px; z-index: 10; cursor: default;
+            transition: 0.15s; pointer-events: none;
+        }
+        .map-node.visited { background-color: #8c7355; border-color: #c9a96e; }
+        .map-node.current { background-color: #cc2222; border-color: #ff4444; width: 34px; height: 34px; font-size: 16px; box-shadow: 0 0 12px #ff4444; }
+
+        .map-label {
+            position: absolute; transform: translate(-50%, 12px);
+            font-size: 9px; color: #c9a96e; text-align: center;
+            white-space: nowrap; pointer-events: none;
+            font-family: 'Georgia', serif; text-shadow: 0 0 3px #000;
+        }
+        .map-legend {
+            display: flex; gap: 16px; margin-top: 8px; flex-shrink: 0;
+            font-size: 12px; color: #c9a96e; font-family: 'Georgia', serif;
+        }
+        .map-legend-dot {
+            display: inline-block; width: 12px; height: 12px;
+            border-radius: 50%; margin-right: 4px; vertical-align: middle;
+        }
+        .map-legend-dot.current { background-color: #cc2222; box-shadow: 0 0 4px #ff4444; }
+        .map-legend-dot.visited { background-color: #8c7355; }
+        .map-legend-dot.unexplored { background-color: #44372c; border: 1px solid #5c4a3d; }
+
+        /* ================= MOBILE LANDSCAPE ================= */
+        @media (max-height: 500px) {
+            body { height: auto; min-height: 100vh; }
+            .game-container {
+                width: 100vw; height: 100vh; max-width: none;
+                border-radius: 0; border-width: 2px;
+            }
+            .main-panel {
+                flex: 2.2; padding: 6px 8px; border-right-width: 2px;
+            }
+            .room-title {
+                font-size: 14px; padding-bottom: 3px; margin-bottom: 4px;
+            }
+            .story-text { font-size: 11px; line-height: 1.3; padding-right: 4px; }
+            .puzzle-box { padding: 4px 6px; font-size: 11px; margin: 4px 0; }
+            .choices-area { grid-template-columns: 1fr 1fr; gap: 3px; }
+            .choice-btn { padding: 4px 6px; font-size: 10px; border-radius: 3px; }
+            .sidebar {
+                flex: 1; padding: 5px 7px; font-size: 11px;
+            }
+            .player-profile { gap: 4px; margin-bottom: 4px; padding-bottom: 3px; }
+            .avatar { width: 28px; height: 28px; font-size: 14px; }
+            .player-name { font-size: 12px; }
+            .save-load-btns { gap: 2px; }
+            .save-load-btns button { padding: 1px 5px; font-size: 9px; }
+            .stats-box { font-size: 12px; margin-bottom: 4px; }
+            .inventory-box h3 { font-size: 12px; margin-bottom: 2px; padding-bottom: 2px; }
+            .inventory-box { margin-bottom: 4px; flex-grow: 0; }
+            .inventory-list li { padding: 2px 5px; margin-bottom: 2px; font-size: 10px; }
+            .location-image-box { height: 50px; margin-top: 4px; }
+            .placeholder-img { font-size: 28px; }
+
+            .map-btn { top: 6px; right: 6px; width: 30px; height: 30px; font-size: 16px; border-radius: 5px; }
+            .mute-btn { bottom: 6px; right: 6px; width: 28px; height: 28px; font-size: 14px; }
+            .map-overlay { align-items: stretch; padding: 5px; }
+            .map-panel { width: 100%; max-height: 95vh; height: auto; padding: 10px; border-radius: 6px; flex: 0 1 auto; }
+            .map-title { font-size: 14px; margin-bottom: 6px; }
+            .map-area { flex: 1; height: auto; min-height: 200px; }
+            .map-node { width: 20px; height: 20px; font-size: 10px; }
+            .map-node.current { width: 24px; height: 24px; font-size: 11px; }
+            .map-label { font-size: 7px; }
+            .map-legend { font-size: 10px; gap: 6px; margin-top: 4px; }
+            .map-close { font-size: 22px; top: 6px; right: 10px; }
+        }
+
+        /* ================= MOBILE PORTRAIT ================= */
+        @media (max-width: 600px) {
+            .game-container {
+                flex-direction: column; width: 100vw; height: 100vh;
+                max-width: none; border-radius: 0; border-width: 2px;
+            }
+            .main-panel {
+                flex: 1 1 0; padding: 8px 10px; border-right: none;
+                border-bottom: 2px solid #5c4a3d; overflow: hidden;
+            }
+            .room-title { font-size: 15px; padding-bottom: 3px; margin-bottom: 5px; }
+            .story-text { font-size: 13px; line-height: 1.35; padding-right: 4px; }
+            .puzzle-box { padding: 6px 8px; font-size: 12px; margin: 5px 0; }
+            .choices-area { grid-template-columns: 1fr; gap: 3px; }
+            .choice-btn { padding: 6px 8px; font-size: 11px; border-radius: 3px; }
+            .sidebar {
+                flex: 0 0 auto; padding: 5px 10px; flex-direction: row;
+                flex-wrap: wrap; gap: 5px; align-items: flex-start;
+                min-height: auto; max-height: 100px; overflow: hidden;
+            }
+            .player-profile { width: 100%; gap: 5px; margin-bottom: 2px; padding-bottom: 2px; }
+            .avatar { width: 28px; height: 28px; font-size: 14px; }
+            .player-name { font-size: 13px; }
+            .save-load-btns { gap: 2px; }
+            .save-load-btns button { padding: 2px 6px; font-size: 9px; }
+            .stats-box { font-size: 12px; margin-bottom: 0; margin-right: 8px; }
+            .inventory-box { margin-bottom: 0; flex-grow: 0; max-height: 60px; overflow-y: auto; }
+            .inventory-box h3 { font-size: 11px; margin-bottom: 1px; padding-bottom: 1px; }
+            .inventory-list li { padding: 2px 5px; margin-bottom: 1px; font-size: 10px; }
+            .location-image-box { display: none; }
+
+            .map-btn { top: 6px; right: 6px; width: 30px; height: 30px; font-size: 16px; border-radius: 5px; }
+            .mute-btn { bottom: 6px; right: 6px; width: 28px; height: 28px; font-size: 14px; }
+            .map-overlay { align-items: stretch; padding: 5px; }
+            .map-panel { width: 100%; max-height: 90vh; height: auto; padding: 10px; border-radius: 6px; flex: 0 1 auto; }
+            .map-title { font-size: 14px; margin-bottom: 6px; }
+            .map-area { flex: 1; height: auto; min-height: 250px; }
+            .map-node { width: 22px; height: 22px; font-size: 11px; }
+            .map-node.current { width: 26px; height: 26px; font-size: 12px; }
+            .map-label { font-size: 8px; }
+            .map-legend { font-size: 10px; gap: 6px; margin-top: 4px; }
+            .map-close { font-size: 22px; top: 6px; right: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <div class="main-panel" id="main-panel">
+            <div class="room-title" id="ui-room-title">Chờ tải game...</div>
+            <div class="story-text" id="ui-story-text"></div>
+            <div class="choices-area" id="ui-choices"></div>
+        </div>
+
+        <div class="sidebar">
+            <div class="player-profile">
+                <div class="avatar">🤓</div>
+                <div class="player-name">Boo</div>
+                <div class="save-load-btns">
+                    <button onclick="saveGame()" title="Lưu game vào máy">💾 Lưu</button>
+                    <button onclick="loadGame()" title="Tải game đã lưu">📂 Tải</button>
+                </div>
+            </div>
+            <div class="stats-box">
+                Máu (HP): <span id="ui-hp">❤️❤️❤️</span>
+            </div>
+            <div class="inventory-box" style="flex-grow:0;">
+                <h3 style="margin-top:0; border-bottom: 1px solid #5c4a3d; padding-bottom:4px; font-size:13px;">🎒 Hành Trang</h3>
+                <ul class="inventory-list" id="ui-inventory" style="max-height:50px; overflow-y:auto;"></ul>
+            </div>
+            <div class="inventory-box" style="flex-grow:0;">
+                <h3 style="margin-top:0; margin-bottom:2px; border-bottom: 1px solid #5c4a3d; padding-bottom:3px; font-size:13px;">🔮 Ấn (<span id="ui-frag-count">0</span>/17)</h3>
+                <ul class="inventory-list" id="ui-fragments" style="max-height:50px; overflow-y:auto;"></ul>
+            </div>
+            <div class="location-image-box">
+                <div class="placeholder-img" id="ui-room-img">...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="map-btn" id="map-btn" onclick="openMap()" title="Bản đồ">🗺️</div>
+    <div class="mute-btn" id="mute-btn" onclick="toggleMute()" title="Bật/Tắt âm thanh">🔊</div>
+
+    <div class="map-overlay" id="map-overlay" onclick="closeMap(event)">
+        <div class="map-panel" onclick="event.stopPropagation()">
+            <button class="map-close" onclick="closeMap()">✕</button>
+            <div class="map-title">🗺️ Bản Đồ Lâu Đài Phép Thuật</div>
+            <div class="map-area" id="map-area">
+                <svg id="map-svg"></svg>
+            </div>
+            <div class="map-legend">
+                <span><span class="map-legend-dot current"></span> Vị trí của Boo</span>
+                <span><span class="map-legend-dot visited"></span> Đã khám phá</span>
+                <span><span class="map-legend-dot unexplored"></span> Chưa khám phá</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ================= HỆ THỐNG AUDIO (WEB AUDIO API) ================= */
+        const MUSIC_CREEPY  = "creepy";
+        const MUSIC_BATTLE  = "battle";
+        const MUSIC_SAFE    = "safe";
+        const MUSIC_SCHOOL  = "school";
+        const MUSIC_DUNGEON = "dungeon";
+        const MUSIC_KITCHEN = "kitchen";
+        const MUSIC_TOWER   = "tower";
+        const MUSIC_LIBRARY = "library";
+        const MUSIC_GARDEN  = "garden";
+
+        let audioCtx = null;
+        let masterGain = null;
+        let droneNodes = [];
+        let melodyTimer = null;
+        let melodyGain = null;
+        let melodyOscNodes = [];
+        let currentBgm = "";
+
+        function initAudioCtx() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            masterGain = audioCtx.createGain();
+            masterGain.gain.value = 0.30;
+            masterGain.connect(audioCtx.destination);
+            melodyGain = audioCtx.createGain();
+            melodyGain.gain.value = 0.25;
+            melodyGain.connect(masterGain);
+        }
+
+        function stopAll() {
+            droneNodes.forEach(n => { try { n.stop(); } catch(e) {} });
+            droneNodes = [];
+            melodyOscNodes.forEach(n => { try { n.stop(); } catch(e) {} });
+            melodyOscNodes = [];
+            if (melodyTimer) { clearInterval(melodyTimer); melodyTimer = null; }
+        }
+
+        function playNote(freq, startTime, dur, vol, type) {
+            if (!audioCtx) return;
+            let osc = audioCtx.createOscillator();
+            osc.type = type || "square";
+            osc.frequency.value = freq;
+            let env = audioCtx.createGain();
+            env.gain.setValueAtTime(0, startTime);
+            env.gain.linearRampToValueAtTime(vol, startTime + 0.015);
+            env.gain.setValueAtTime(vol, startTime + dur * 0.6);
+            env.gain.linearRampToValueAtTime(0, startTime + dur);
+            osc.connect(env);
+            env.connect(melodyGain);
+            osc.start(startTime);
+            osc.stop(startTime + dur + 0.01);
+            melodyOscNodes.push(osc);
+        }
+
+        function startMelody(notes, bpm, waveType) {
+            stopAllMelody();
+            let beatMs = 60000 / bpm;
+            let idx = 0;
+
+            function scheduleLoop() {
+                let now = audioCtx.currentTime;
+                let barCount = 8;
+                for (let i = 0; i < barCount; i++) {
+                    let t = now + i * (beatMs / 1000);
+                    let n = notes[idx % notes.length];
+                    if (n > 0) {
+                        playNote(n, t, beatMs / 1000 * 0.85, 0.14, waveType);
+                    }
+                    idx++;
+                }
+            }
+
+            scheduleLoop();
+            melodyTimer = setInterval(scheduleLoop, (beatMs * 8) * 0.95);
+        }
+
+        function stopAllMelody() {
+            melodyOscNodes.forEach(n => { try { n.stop(); } catch(e) {} });
+            melodyOscNodes = [];
+            if (melodyTimer) { clearInterval(melodyTimer); melodyTimer = null; }
+        }
+
+        function startDrone(notes, waveType, vol) {
+            droneNodes.forEach(n => { try { n.stop(); } catch(e) {} });
+            droneNodes = [];
+            notes.forEach(n => {
+                let osc = audioCtx.createOscillator();
+                osc.type = waveType || "triangle";
+                osc.frequency.value = n;
+                let g = audioCtx.createGain();
+                g.gain.value = vol;
+                osc.connect(g);
+                g.connect(masterGain);
+                osc.start();
+                droneNodes.push(osc);
+            });
+        }
+
+        function playClick() {
+            if (!audioCtx || masterGain.gain.value < 0.005) return;
+            let now = audioCtx.currentTime;
+            let osc = audioCtx.createOscillator();
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(1200, now);
+            osc.frequency.linearRampToValueAtTime(400, now + 0.04);
+            let env = audioCtx.createGain();
+            env.gain.setValueAtTime(0.09, now);
+            env.gain.linearRampToValueAtTime(0, now + 0.05);
+            osc.connect(env);
+            env.connect(masterGain);
+            osc.start(now);
+            osc.stop(now + 0.06);
+        }
+
+        function playCreepy() {
+            initAudioCtx(); stopAll();
+            startDrone([262, 330, 392], "sine", 0.012);
+            startMelody([294, 330, 349, 440, 349, 330, 294, 262, 330, 349, 392, 349, 330, 294, 262, 294], 102, "triangle");
+        }
+
+        function playBattle() {
+            initAudioCtx(); stopAll();
+            startDrone([262, 330, 392], "triangle", 0.012);
+            startMelody([392, 440, 523, 440, 392, 523, 440, 392, 330, 392, 440, 523, 440, 392, 330, 262], 112, "square");
+        }
+
+        function playSafe() {
+            initAudioCtx(); stopAll();
+            startDrone([262, 330, 392], "sine", 0.012);
+            startMelody([262, 330, 392, 523, 440, 392, 330, 262, 294, 330, 392, 440, 523, 440, 392, 330], 108, "triangle");
+        }
+
+        function playSchool() {
+            initAudioCtx(); stopAll();
+            startDrone([262, 330, 392], "sine", 0.012);
+            startMelody([262, 330, 392, 523, 440, 392, 330, 262, 294, 262, 330, 349, 392, 440, 349, 330], 90, "triangle");
+        }
+
+        function playDungeon() {
+            initAudioCtx(); stopAll();
+            startDrone([262, 311, 392], "sine", 0.012);
+            startMelody([294, 330, 349, 440, 349, 330, 294, 262, 330, 349, 392, 349, 330, 294, 262, 294], 100, "triangle");
+        }
+
+        function playKitchen() {
+            initAudioCtx(); stopAll();
+            startDrone([196, 294, 392], "triangle", 0.012);
+            startMelody([294, 392, 440, 392, 294, 330, 392, 294, 440, 392, 330, 294, 392, 294, 330, 294], 118, "square");
+        }
+
+        function playTower() {
+            initAudioCtx(); stopAll();
+            startDrone([330, 440], "sine", 0.012);
+            startMelody([262, 294, 330, 349, 392, 440, 523, 440, 392, 349, 330, 294, 262, 330, 392, 523], 100, "triangle");
+        }
+
+        function playLibrary() {
+            initAudioCtx(); stopAll();
+            startDrone([349, 440, 523], "sine", 0.010);
+            startMelody([349, 392, 440, 349, 440, 523, 440, 392, 349, 330, 349, 392, 440, 349, 392, 349], 88, "triangle");
+        }
+
+        function playGarden() {
+            initAudioCtx(); stopAll();
+            startDrone([440, 554, 659], "sine", 0.010);
+            startMelody([440, 554, 659, 554, 440, 554, 494, 440, 494, 554, 440, 659, 554, 494, 440, 494], 95, "triangle");
+        }
+
+        function playMusic(type) {
+            if (!type || currentBgm === type) return;
+            currentBgm = type;
+            const map = {
+                creepy: playCreepy, battle: playBattle, safe: playSafe,
+                school: playSchool, dungeon: playDungeon, kitchen: playKitchen,
+                tower: playTower, library: playLibrary, garden: playGarden
+            };
+            if (map[type]) map[type]();
+        }
+
+        /* ================= QUẢN LÝ TRẠNG THÁI ================= */
+        let state = {
+            hp: 3,
+            maxHp: 3,
+            inventory: [], 
+            inventoryNames: [], 
+            fragments: [],
+            fragmentNames: [],
+            bossPhase: 0,
+            currentRoom: 0, 
+            visitedRooms: [],
+            flags: {
+                ngucToiSolved: false,
+                bepSolved: false,
+                sanSauSolved: false,
+                thuVienUnlocked: false,
+                thuVienSolved: false,
+                phongCheThuatSolved: false,
+                bossDefeated: false,
+                hamMoTuSolved: false,
+                hamRuouUnlocked: false,
+                hamRuouSolved: false,
+                khuVuonCoSolved: false,
+                daiPhunNuocSolved: false,
+                thapCanhSolved: false,
+                phongGuongUnlocked: false,
+                phongGuongSolved: false,
+                buaChuSolved: false,
+                thapChuongSolved: false,
+                thuPhapSolved: false,
+                hanhLangKyTuSolved: false,
+                vuonNguNghiaSolved: false,
+                dienThoCaSolved: false,
+                banDoCoSolved: false,
+                thapDongHoSolved: false,
+                sanVuongSolved: false,
+                thuPhongNgonTuSolved: false,
+                matThatSoHocSolved: false
+            },
+            q: {}
+        };
+
+        function rInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+        function shuffle(arr) { let a = [...arr]; for (let i = a.length-1;i>0;i--) { let j = rInt(0,i); [a[i],a[j]] = [a[j],a[i]]; } return a; }
+
+        /* ================= GENERATOR TOÁN ================= */
+        function genRoom1() {
+            let a = rInt(15, 50), b = rInt(2, 9), c = rInt(3, 9);
+            let correct = a + b * c;
+            let wrongs = [a + b * (c + 1), a + (b + 1) * c, a + b * (c - 1)];
+            wrongs = [...new Set(wrongs)].filter(w => w !== correct && w > 0).slice(0, 3);
+            while (wrongs.length < 3) { let cand = correct + rInt(1, 3) * (rInt(0,1) ? 1 : -1); if (!wrongs.includes(cand) && cand !== correct && cand > 0) wrongs.push(cand); }
+            return {
+                puzzleHTML: `<div class="puzzle-box">"Mật mã là kết quả phép tính: <strong>${a} + ${b} × ${c}</strong>. Đoán sai mi sẽ bị giật điện!"</div>`,
+                choices: shuffle([{text: String(correct), isCorrect: true, wrongMsg: ""},{text: String(wrongs[0]), isCorrect: false, wrongMsg: "Điện giật! Nhớ quy tắc nhân chia trước, cộng trừ sau."},{text: String(wrongs[1]), isCorrect: false, wrongMsg: "Điện giật! Tính lại đi nhóc."},{text: String(wrongs[2]), isCorrect: false, wrongMsg: "Điện giật! Kiểm tra kỹ thứ tự phép tính."}]),
+                correctMsg: `Cạch! Cửa mở. Boo đã giải đúng (${b} × ${c} = ${b*c}, ${a} + ${b*c} = ${correct}).`
+            };
+        }
+
+        function genRoom3() {
+            let pots = rInt(3, 8), spiders = rInt(8, 15), have = rInt(10, pots*spiders - 5);
+            let need = pots * spiders - have;
+            let total = pots * spiders;
+            let wrongs = [total, (pots - 1) * spiders - have, need + spiders].filter(w => w > 0 && w !== need).slice(0, 3);
+            while (wrongs.length < 3) { let cand = need + rInt(1, 5) * (rInt(0,1) ? 1 : -1); if (!wrongs.includes(cand) && cand !== need && cand > 0) wrongs.push(cand); }
+            return {
+                puzzleHTML: `<div class="puzzle-box">Lão lầm bầm: "Ta cần nấu ${pots} nồi súp, mỗi nồi cần đúng ${spiders} con nhện lửa. Sáng nay mới bắt được ${have} con. Phải đi lùng thêm bao nhiêu con nữa đây?"</div>`,
+                choices: shuffle([{text: `${need} con`, isCorrect: true, wrongMsg: ""},{text: `${wrongs[0]} con`, isCorrect: false, wrongMsg: "Lão tức giận phóng dao: 'Tính ngu thế!'"},{text: `${wrongs[1]} con`, isCorrect: false, wrongMsg: "Lão phóng dao: 'Ngươi chưa trừ đi số nhện đang có à!'"},{text: `${wrongs[2]} con`, isCorrect: false, wrongMsg: "Lão phóng dao: 'Tính toán cẩn thận vào!'"}]),
+                correctMsg: `Lão vui vẻ đưa cho bạn Chìa Khóa Bạc. (${pots} × ${spiders} = ${total}, ${total} - ${have} = ${need})`,
+                fallbackRoom: 2
+            };
+        }
+
+        function genRoom5() {
+            let base = rInt(3, 9);
+            while (base === 7) base = rInt(3, 9);
+            let startIdx = rInt(1, 3);
+            let vals = [];
+            for (let i = 0; i < 5; i++) vals.push(base * (startIdx + i));
+            let missingIdx = rInt(1, 3);
+            let correct = vals[missingIdx];
+            let extended = [];
+            for (let i = -2; i < 7; i++) {
+                let v = base * (startIdx + i);
+                if (v > 0) extended.push(v);
+            }
+            let wrongs = extended.filter(v => v !== correct && !vals.includes(v)).slice(0, 3);
+            while (wrongs.length < 3) { let cand = correct + base * (rInt(2, 4)); if (!wrongs.includes(cand) && cand !== correct && cand > 0) wrongs.push(cand); }
+            let display = vals.map((v, i) => i === missingIdx ? "__" : String(v)).join(", ");
+            return {
+                puzzleHTML: `<div class="puzzle-box">Các bậc an toàn ghi: ${display}. Boo phải nhảy vào bậc số mấy?</div>`,
+                choices: shuffle([{text: String(correct), isCorrect: true, wrongMsg: ""},{text: String(wrongs[0]), isCorrect: false, wrongMsg: "Bước hụt! Rơi bạch xuống Hành Lang Hầm."},{text: String(wrongs[1]), isCorrect: false, wrongMsg: "Bước hụt! Rơi bạch xuống Hành Lang Hầm."},{text: String(wrongs[2]), isCorrect: false, wrongMsg: "Bước hụt! Rơi bạch xuống Hành Lang Hầm."}]),
+                correctMsg: `Đúng bảng nhân ${base}! Boo an toàn lên tới đỉnh.`,
+                fallbackRoom: 2
+            };
+        }
+
+        function genRoom7() {
+            let halfP = rInt(10, 30), len = rInt(4, halfP - 3);
+            let peri = halfP * 2, width = halfP - len;
+            let wrongs = [len, halfP, peri].filter(w => w !== width && w > 0);
+            while (wrongs.length < 3) { let cand = width + rInt(1, 5) * (rInt(0,1) ? 1 : -1); if (!wrongs.includes(cand) && cand !== width && cand > 0) wrongs.push(cand); }
+            return {
+                puzzleHTML: `<div class="puzzle-box">Nhỏ số giọt tinh chất bằng đúng CHIỀU RỘNG khu vườn lão phù thủy. Biết khu vườn hình chữ nhật có chu vi là ${peri}m, chiều dài ${len}m.</div>`,
+                choices: shuffle([{text: `${width} giọt`, isCorrect: true, wrongMsg: ""},{text: `${wrongs[0]} giọt`, isCorrect: false, wrongMsg: "Bùm! Sai bét. Phải tính nửa chu vi rồi trừ chiều dài."},{text: `${wrongs[1]} giọt`, isCorrect: false, wrongMsg: "Bùm! Đó là nửa chu vi, chưa trừ chiều dài."},{text: `${wrongs[2]} giọt`, isCorrect: false, wrongMsg: "Bùm! Đó là chu vi, phải chia đôi trước."}]),
+                correctMsg: `Pha chế thành công! (${peri} : 2 = ${halfP}, ${halfP} - ${len} = ${width}). Bạn nhận được Bom Ánh Sáng.`,
+                fallbackRoom: 6
+            };
+        }
+
+        function genRoom10() {
+            let a = rInt(5, 20), b = rInt(3, 15);
+            while (a === b) b = rInt(3, 15);
+            let correct = b * a + a + b;
+            let wrongs = [a*b, a+b, b*a+a].filter(w => w !== correct && w > 0);
+            return {
+                puzzleHTML: `<div class="puzzle-box">"Phép toán cổ đại: <strong>a △ b = b × a + a + b</strong>. Hãy tính <strong>${a} △ ${b}</strong> để mở nắp mộ!"</div>`,
+                choices: shuffle([{text: String(correct), isCorrect: true, wrongMsg: ""},{text: String(wrongs[0]), isCorrect: false, wrongMsg: "Sai! Bạn quên cộng a+b. (Đây chỉ là b×a)."},{text: String(wrongs[1]), isCorrect: false, wrongMsg: "Sai! Đây chỉ là a+b, bạn quên nhân b×a."},{text: String(wrongs[2]), isCorrect: false, wrongMsg: "Sai! Bạn thiếu cộng b. Tính lại đầy đủ các bước."}]),
+                correctMsg: `Đúng! ${b}×${a} + ${a} + ${b} = ${b*a} + ${a+b} = ${correct}. Nắp mộ mở ra!`
+            };
+        }
+
+        function genRoom11() {
+            let D = rInt(50, 500);
+            let B = rInt(100, 1500);
+            let A = B + D, S = A + B;
+            let correct = A;
+            let wrongs = [...new Set([B, S, D])].filter(w => w !== correct);
+            while (wrongs.length < 3) { let cand = correct + rInt(1, 15) * (rInt(0,1) ? 1 : -1); if (!wrongs.includes(cand) && cand !== correct && cand > 0) wrongs.push(cand); }
+            return {
+                puzzleHTML: `<div class="puzzle-box">"Tổng rượu trong hai thùng là <strong>${S} lít</strong>. Thùng A nhiều hơn thùng B <strong>${D} lít</strong>. Hãy cho biết thùng A chứa bao nhiêu lít?"</div>`,
+                choices: shuffle([{text: `${correct} lít`, isCorrect: true, wrongMsg: ""},{text: `${wrongs[0]} lít`, isCorrect: false, wrongMsg: "Sai! Đây là số lít của thùng B."},{text: `${wrongs[1]} lít`, isCorrect: false, wrongMsg: "Sai! Đây là tổng hai thùng, không phải thùng A."},{text: `${wrongs[2]} lít`, isCorrect: false, wrongMsg: "Sai! Đây là hiệu số, không phải số lít thùng A."}]),
+                correctMsg: `Chính xác! A = (${S}+${D})÷2 = ${correct}. Khóa phép tan biến!`
+            };
+        }
+
+        function genRoom12() {
+            let r = rInt(2, 4), B = rInt(8, 30), A = r * B, S = A + B;
+            let wrongs = [...new Set([A, S, B*2])].filter(w => w !== B && w > 0);
+            while (wrongs.length < 3) { let cand = B + rInt(1, 5) * (rInt(0,1) ? 1 : -1); if (!wrongs.includes(cand) && cand !== B && cand > 0) wrongs.push(cand); }
+            return {
+                puzzleHTML: `<div class="puzzle-box">"Tổng số hoa hồng (A) và hoa cúc (B) là <strong>${S} bông</strong>. Hoa hồng gấp <strong>${r} lần</strong> hoa cúc. Hỏi có bao nhiêu bông <strong>hoa cúc (B)</strong>?"</div>`,
+                choices: shuffle([{text: `${B} bông`, isCorrect: true, wrongMsg: ""},{text: `${wrongs[0]} bông`, isCorrect: false, wrongMsg: "Sai! Đây là số hoa hồng (A), đề hỏi hoa cúc (B)."},{text: `${wrongs[1]} bông`, isCorrect: false, wrongMsg: "Sai! Đây là tổng, phải chia cho (tỉ lệ+1)."},{text: `${wrongs[2]} bông`, isCorrect: false, wrongMsg: "Sai! Hãy vẽ sơ đồ: B là 1 phần, A là ${r} phần, tổng ${r+1} phần."}]),
+                correctMsg: `Đúng! B = ${S}÷${r+1} = ${B}. Cổng vườn mở ra!`
+            };
+        }
+
+        function genRoom13() {
+            let x = rInt(5, 18);
+            let a = rInt(x + 5, x + 30);
+            let b = 3 * (a - x) - x;
+            while (b <= 0 || b > 100) {
+                a = rInt(x + 5, x + 30);
+                b = 3 * (a - x) - x;
+            }
+            let halfDiff = Math.round((a - b) / 2);
+            let wrongs = [...new Set([a, halfDiff, Math.round(a / 3)])].filter(w => w > 0 && w !== x).slice(0, 3);
+            while (wrongs.length < 3) { let cand = x + rInt(2, 6) * (rInt(0,1) ? 1 : -1); if (!wrongs.includes(cand) && cand !== x && cand > 0) wrongs.push(cand); }
+            return {
+                puzzleHTML: `<div class="puzzle-box">"Bể Jacky có <strong>${a} lít</strong> nước thần, bể Emma có <strong>${b} lít</strong>. Jacky phải chuyển bao nhiêu lít sang Emma để lượng nước của Emma <strong>gấp 3 lần</strong> Jacky?"</div>`,
+                choices: shuffle([{text: `${x} lít`, isCorrect: true, wrongMsg: ""},{text: `${wrongs[0]} lít`, isCorrect: false, wrongMsg: "Sai! Kiểm tra: số lít sau chuyển của Emma có gấp 3 Jacky không?"},{text: `${wrongs[1]} lít`, isCorrect: false, wrongMsg: "Sai! Đặt x là số lít chuyển, giải: (b+x)=3(a-x)."},{text: `${wrongs[2]} lít`, isCorrect: false, wrongMsg: "Sai! Tính toán cẩn thận lại phương trình."}]),
+                correctMsg: `Chính xác! (${b}+x)=3(${a}-x) → x=${x}. Đài phun nước phát sáng!`
+            };
+        }
+
+        function genRoom14() {
+            let k = rInt(2, 4), B = rInt(50, 200), A = k * B, S = A + B;
+            let diff = A - B;
+            let wrongs = [B, A, S].filter(w => w !== diff);
+            while (wrongs.length < 3) { let cand = diff + rInt(1, 5) * (rInt(0,1) ? 1 : -1); if (!wrongs.includes(cand) && cand !== diff && cand > 0) wrongs.push(cand); }
+            return {
+                puzzleHTML: `<div class="puzzle-box">"Tổng của A và B là <strong>${S}</strong>. A gấp <strong>${k} lần</strong> B. Hãy tính <strong>hiệu của A và B</strong> (A - B) để thắp sáng ngọn đèn tháp!"</div>`,
+                choices: shuffle([{text: String(diff), isCorrect: true, wrongMsg: ""},{text: String(wrongs[0]), isCorrect: false, wrongMsg: "Sai! Đây là giá trị của B, không phải A-B."},{text: String(wrongs[1]), isCorrect: false, wrongMsg: "Sai! Đây là giá trị của A, không phải A-B."},{text: String(wrongs[2]), isCorrect: false, wrongMsg: "Sai! Đây là tổng, cần tìm hiệu A-B."}]),
+                correctMsg: `Chính xác! B=${S}÷${k+1}=${B}, A=${A}, A-B=${diff}. Đèn tháp bừng sáng!`
+            };
+        }
+
+        function genRoom15() {
+            let x = rInt(3, 8), y = rInt(3, 8), z = rInt(4, 10);
+            while (x === y) y = rInt(3, 8);
+            let inner = x * y - x - y + 1;
+            let correct = z * inner - z - inner + 1;
+            let d1 = z * inner;
+            let d2 = z * (x * y) - z - (x * y) + 1;
+            let d3 = (z * inner + z + inner + 1);
+            let wrongs = [d1, d2, d3].filter(w => w !== correct && w > 0).slice(0, 3);
+            while (wrongs.length < 3) { let cand = correct + rInt(5, 25) * (rInt(0,1) ? 1 : -1); if (!wrongs.includes(cand) && cand !== correct && cand > 0) wrongs.push(cand); }
+            return {
+                puzzleHTML: `<div class="puzzle-box">"Phép gương cổ: <strong>a ◇ b = a × b - a - b + 1</strong>. Hãy tính <strong>${z} ◇ (${x} ◇ ${y})</strong> để dừng những tấm gương!"</div>`,
+                choices: shuffle([{text: String(correct), isCorrect: true, wrongMsg: ""},{text: String(wrongs[0]), isCorrect: false, wrongMsg: "Sai! Bạn quên trừ a và b. Tính từng bước cẩn thận."},{text: String(wrongs[1]), isCorrect: false, wrongMsg: "Sai! Tính nhầm bước trong ngoặc. Hãy tính lại ${x}◇${y} trước."},{text: String(wrongs[2]), isCorrect: false, wrongMsg: "Sai! Nhầm dấu cộng và trừ trong công thức phép gương."}]),
+                correctMsg: `Chính xác! ${x}◇${y}=${inner}, ${z}◇${inner}=${correct}. Gương dừng xoay!`
+            };
+        }
+
+        function genRoom22() {
+            let d = rInt(7, 16), r = rInt(4, 11);
+            while (d === r) r = rInt(4, 11);
+            let correct = d * r;
+            let peri = (d + r) * 2;
+            let wrongs = [...new Set([peri, d + r, d * (r + 1)])].filter(w => w !== correct && w > 0).slice(0, 3);
+            while (wrongs.length < 3) { let cand = (d + rInt(0,1)) * r; if (!wrongs.includes(cand) && cand !== correct && cand > 0) wrongs.push(cand); }
+            return {
+                puzzleHTML: `<div class="puzzle-box">Trên tấm bản đồ cổ khắc một thửa ruộng hình chữ nhật: <strong>chiều dài ${d}m, chiều rộng ${r}m</strong>. Hãy tính <strong>diện tích</strong> thửa ruộng (m²) để xác định vị trí kho báu!</div>`,
+                choices: shuffle([{text: `${correct} m²`, isCorrect: true, wrongMsg: ""},{text: `${wrongs[0]} m`, isCorrect: false, wrongMsg: "Bản đồ cháy! Đây là chu vi. Diện tích = dài × rộng."},{text: `${wrongs[1]} m²`, isCorrect: false, wrongMsg: "Bản đồ cháy! Đây là tổng dài+rộng. Phải nhân vào."},{text: `${wrongs[2]} m²`, isCorrect: false, wrongMsg: "Bản đồ cháy! Diện tích = chiều dài × chiều rộng. Tính lại đi."}]),
+                correctMsg: `Chính xác! ${d} × ${r} = ${correct} m². Tấm bản đồ tự động đánh dấu kho báu!`
+            };
+        }
+
+        function genRoom23() {
+            let h = rInt(7, 10), m = rInt(1, 3) * 15;
+            let d = rInt(3, 9) * 5;
+            let total = h * 60 + m + d;
+            let eh = Math.floor(total / 60), em = total % 60;
+            let displayH = eh > 12 ? eh - 12 : eh;
+            let correct = em === 0 ? `${displayH} giờ` : `${displayH} giờ ${em} phút`;
+            let w1H = displayH + 1;
+            if (w1H > 12) w1H -= 12;
+            let w1 = em === 0 ? `${w1H} giờ` : `${w1H} giờ ${em} phút`;
+            let w2 = `${h} giờ ${m} phút`;
+            let w3H = rInt(6, 12), w3M = rInt(0, 11) * 5;
+            while ((w3H === displayH && w3M === em) || (w3H === h && w3M === m) || (w3H === w1H && w3M === em)) {
+                w3H = rInt(6, 12);
+                w3M = rInt(0, 11) * 5;
+            }
+            let w3 = w3M === 0 ? `${w3H} giờ` : `${w3H} giờ ${w3M} phút`;
+            let wrongs = [w1, w2, w3].filter(w => w !== correct);
+            while (wrongs.length < 3) {
+                let extraH = rInt(6, 12), extraM = rInt(0, 11) * 5;
+                if (extraM === 0 && em === 0 && extraH === displayH) extraM = 15;
+                let extra = extraM === 0 ? `${extraH} giờ` : `${extraH} giờ ${extraM} phút`;
+                if (extra !== correct && !wrongs.includes(extra)) wrongs.push(extra);
+            }
+            return {
+                puzzleHTML: `<div class="puzzle-box">Boo bắt đầu vào Tháp Đồng Hồ lúc <strong>${h} giờ ${m} phút</strong>. Mỗi tầng mất <strong>5 phút</strong> để leo. Sau <strong>${d} phút</strong> (tương đương ${d/5} tầng), Boo dừng lại. Hỏi lúc đó là <strong>mấy giờ</strong>?</div>`,
+                choices: shuffle([{text: correct, isCorrect: true, wrongMsg: ""},{text: wrongs[0], isCorrect: false, wrongMsg: "Sai! Cộng ${d} phút vào ${h} giờ ${m} phút rồi đổi ra giờ nhé."},{text: wrongs[1], isCorrect: false, wrongMsg: "Sai! Đây là giờ bắt đầu. Phải cộng thêm ${d} phút."},{text: wrongs[2], isCorrect: false, wrongMsg: "Sai! Nhẩm lại: ${h} giờ ${m} phút + ${d} phút = ?"}]),
+                correctMsg: `Chính xác! ${h} giờ ${m} phút + ${d} phút = ${correct}. Chuông đồng hồ ngân vang!`
+            };
+        }
+
+        function genRoom24() {
+            let side = rInt(5, 15);
+            let correct = side * 4;
+            let area = side * side;
+            let wrongs = [area, side + 4, side * 2].filter(w => w !== correct && w > 0);
+            while (wrongs.length < 3) { let cand = correct + rInt(1, 4) * (rInt(0,1) ? 1 : -1); if (!wrongs.includes(cand) && cand !== correct && cand > 0) wrongs.push(cand); }
+            return {
+                puzzleHTML: `<div class="puzzle-box">Sân đấu cổ đại có dạng <strong>hình vuông</strong>, mỗi cạnh dài <strong>${side}m</strong>. Các chiến binh đá cần biết <strong>chu vi</strong> sân đấu để dựng hàng rào bảo vệ!</div>`,
+                choices: shuffle([{text: `${correct} m`, isCorrect: true, wrongMsg: ""},{text: `${wrongs[0]} m²`, isCorrect: false, wrongMsg: "Sai! Đây là diện tích (${side}×${side}). Chu vi = cạnh × 4."},{text: `${wrongs[1]} m`, isCorrect: false, wrongMsg: "Sai! Chu vi = cạnh × 4, không phải cạnh + 4."},{text: `${wrongs[2]} m`, isCorrect: false, wrongMsg: "Sai! Đây mới là hai lần cạnh. Chu vi = cạnh × 4."}]),
+                correctMsg: `Chính xác! Chu vi = ${side} × 4 = ${correct}m. Hàng rào dựng lên!`
+            };
+        }
+
+        function genRoom26() {
+            let divisor = rInt(3, 8), quotient = rInt(4, 12), remainder = rInt(1, divisor - 1);
+            if (remainder < 1) remainder = 1;
+            let dividend = divisor * quotient + remainder;
+            let wrong1 = divisor * quotient;
+            let wrong2 = divisor * (quotient + 1);
+            let wrong3 = divisor * quotient - remainder;
+            let wrongs = [wrong1, wrong2, wrong3].filter(w => w !== dividend && w > 0).slice(0, 3);
+            while (wrongs.length < 3) { let cand = dividend + divisor * (rInt(0,1) ? 1 : -1); if (!wrongs.includes(cand) && cand !== dividend && cand > 0) wrongs.push(cand); }
+            return {
+                puzzleHTML: `<div class="puzzle-box">Phép thuật khóa mật thất chỉ mở khi biết <strong>số bị chia</strong>. Biết <strong>số chia = ${divisor}</strong>, <strong>thương = ${quotient}</strong>, <strong>số dư = ${remainder}</strong>. Hỏi số bị chia là bao nhiêu?</div>`,
+                choices: shuffle([{text: String(dividend), isCorrect: true, wrongMsg: ""},{text: String(wrongs[0]), isCorrect: false, wrongMsg: "Sai! Đây chỉ là số chia × thương. Thiếu cộng số dư."},{text: String(wrongs[1]), isCorrect: false, wrongMsg: "Sai! Công thức: Số bị chia = số chia × thương + số dư."},{text: String(wrongs[2]), isCorrect: false, wrongMsg: "Sai! Nhớ cộng số dư, không được trừ."}]),
+                correctMsg: `Chính xác! ${divisor} × ${quotient} + ${remainder} = ${divisor*quotient} + ${remainder} = ${dividend}. Mật thất mở ra!`
+            };
+        }
+
+        /* ================= BOSS PUZZLE GENERATORS ================= */
+        function genBossPhase1() {
+            let a = rInt(5, 20), b = rInt(3, 9), c = rInt(4, 12), d = rInt(2, 8);
+            let correct = a * b + c * d;
+            let wrongs = [a*b + c*(d+1), (a+1)*b + c*d, a*(b+1) + c*d, (a+2)*b + c*d]
+                .filter(w => w !== correct && w > 0).slice(0, 3);
+            while (wrongs.length < 3) { let cand = correct + rInt(1, 12) * (rInt(0,1)?1:-1); if (!wrongs.includes(cand) && cand !== correct && cand > 0) wrongs.push(cand); }
+            return {
+                puzzleHTML: `<div class="puzzle-box">🧪 Lão phù thủy vung đũa phép: "Mũi tên thần thứ nhất chỉ bắn trúng nếu ngươi tính đúng: <strong>${a} × ${b} + ${c} × ${d} = ?</strong>"</div>`,
+                choices: shuffle([{text: String(correct), isCorrect: true, wrongMsg: ""},{text: String(wrongs[0]), isCorrect: false, wrongMsg: "Tia sét phản công! Nhớ nhân trước, cộng sau nhé."},{text: String(wrongs[1]), isCorrect: false, wrongMsg: "Tia sét phản công! Tính từng phép nhân rồi cộng lại."},{text: String(wrongs[2]), isCorrect: false, wrongMsg: "Tia sét phản công! Kiểm tra lại phép tính."}]),
+                correctMsg: `🏹 Mũi tên thần thứ nhất xé gió bay tới! (${a}×${b}=${a*b}, ${c}×${d}=${c*d}, ${a*b}+${c*d}=${correct})`
+            };
+        }
+
+        function genBossPhase2() {
+            let p = pool20[rInt(0, pool20.length - 1)];
+            let correctIdx = p.correctIdx;
+            let opts = p.options.map((opt, i) => ({text: opt, isCorrect: i === correctIdx, wrongMsg: p.msgs[i] || "Sai! Đây không phải từ chỉ đặc điểm."}));
+            return {
+                puzzleHTML: `<div class="puzzle-box">📜 Lão phù thủy niệm thần chú, một đoạn văn hiện ra: "${p.text}"<br>Hãy tìm <strong>từ chỉ ĐẶC ĐIỂM</strong> để nạp sức mạnh cho mũi tên thần thứ hai!</div>`,
+                choices: shuffle(opts),
+                correctMsg: `🏹 Mũi tên thần thứ hai lao vút đi! '${p.options[correctIdx]}' chính là từ chỉ đặc điểm!`
+            };
+        }
+
+        function genBossPhase3() {
+            let A = rInt(20, 60), B = rInt(10, A - 5), S = A + B, D = A - B;
+            let correct = A * B;
+            let wrongs = [A + B, A * (A - D), (S + D) * (S - D) / 4 + rInt(5,20)]
+                .filter(w => w !== correct && w > 0).slice(0, 3);
+            while (wrongs.length < 3) { let cand = correct + rInt(1, 25) * (rInt(0,1)?1:-1); if (!wrongs.includes(cand) && cand !== correct && cand > 0) wrongs.push(cand); }
+            return {
+                puzzleHTML: `<div class="puzzle-box">⚡ Lão phù thủy điên cuồng: "Hai con số bí ẩn có <strong>tổng là ${S}</strong> và <strong>hiệu là ${D}</strong>. Mũi tên thứ ba cần <strong>tích của chúng</strong>. Hãy tính đi, nhóc con!"</div>`,
+                choices: shuffle([{text: String(correct), isCorrect: true, wrongMsg: ""},{text: String(wrongs[0]), isCorrect: false, wrongMsg: "Sét đánh! Đây là tổng, không phải tích."},{text: String(wrongs[1]), isCorrect: false, wrongMsg: "Sét đánh! Tìm số lớn và số bé trước rồi nhân."},{text: String(wrongs[2]), isCorrect: false, wrongMsg: "Sét đánh! Số lớn = (Tổng+Hiệu)÷2, số bé = (Tổng-Hiệu)÷2."}]),
+                correctMsg: `🏹 Mũi tên thần thứ ba xuyên thủng khiên phép! (Số lớn = (${S}+${D})÷2 = ${A}, Số bé = (${S}-${D})÷2 = ${B}, Tích = ${correct})`
+            };
+        }
+
+        function genBossPhase4() {
+            let p = pool25[rInt(0, pool25.length - 1)];
+            let correctIdx = p.correctIdx;
+            let opts = p.options.map((opt, i) => ({text: opt, isCorrect: i === correctIdx, wrongMsg: p.msgs[i]}));
+            return {
+                puzzleHTML: `<div class="puzzle-box">🔮 Lão phù thủy gào lên, một dòng chữ lửa xuất hiện: <em>"${p.sentence}"</em><br>Xác định <strong>kiểu câu</strong> để nạp sức mạnh cho mũi tên thứ tư!</div>`,
+                choices: shuffle(opts),
+                correctMsg: `🏹 Mũi tên thần thứ tư lao thẳng vào ngực lão phù thủy! '${p.sentence}' là ${p.options[correctIdx]}.`
+            };
+        }
+
+        function genBossPhase5() {
+            let x = rInt(3, 12);
+            let A = rInt(2, 5);
+            let B = rInt(6, 20);
+            let C = rInt(2, 3);
+            let t1 = x * A + B;
+            while (t1 % C !== 0) { B = rInt(6, 20); t1 = x * A + B; }
+            let t2 = t1 / C;
+            let D = rInt(2, Math.max(3, t2 - 3));
+            let E = t2 - D;
+            while (E <= 1) { D = rInt(2, Math.max(3, t2 - 3)); E = t2 - D; }
+            let correct = x;
+            let w1 = E + D;
+            let w2 = (E + D) * C - B;
+            while (w2 % A !== 0 && w2 > 0) w2++;
+            w2 = Math.round(w2 / A);
+            let w3 = correct + rInt(1, 4) * (rInt(0,1) ? 1 : -1);
+            if (w3 < 1) w3 = correct + rInt(1, 3);
+            let wrongs = [w1, w2, w3].filter(w => w !== correct && w > 0 && Number.isInteger(w)).slice(0, 3);
+            while (wrongs.length < 3) {
+                let cand = correct + rInt(1, 5) * (rInt(0,1) ? 1 : -1);
+                if (!wrongs.includes(cand) && cand !== correct && cand > 0 && Number.isInteger(cand)) wrongs.push(cand);
+            }
+            return {
+                puzzleHTML: `<div class="puzzle-box">💣 <strong>KÍCH HOẠT BOM ÁNH SÁNG!</strong><br>Lão phù thủy thều thào niệm lời nguyền cuối cùng:<br><em>"Hỡi con số bí ẩn kia, hãy thức tỉnh!<br>Nếu đem ngươi <strong>nhân với ${A}</strong>, rồi <strong>cộng thêm ${B}</strong>,<br>được bao nhiêu <strong>chia cho ${C}</strong>, cuối cùng <strong>trừ đi ${D}</strong>,<br>sẽ nhận được kết quả là <strong>${E}</strong>."</em><br><br>Hãy tìm ra con số bí ẩn để kích nổ Bom Ánh Sáng!</div>`,
+                choices: shuffle([
+                    {text: String(correct), isCorrect: true, wrongMsg: ""},
+                    {text: String(wrongs[0]), isCorrect: false, wrongMsg: "Bom rung lắc dữ dội! Hãy suy luận ngược từ kết quả cuối cùng."},
+                    {text: String(wrongs[1]), isCorrect: false, wrongMsg: `Bom rung lắc! Mẹo: lấy ${E} + ${D} = ${E+D}, rồi × ${C} = ${(E+D)*C}, rồi - ${B} = ${(E+D)*C-B}, rồi ÷ ${A}.`},
+                    {text: String(wrongs[2]), isCorrect: false, wrongMsg: "Bom rung lắc! Hãy tính ngược từng bước một cho chắc chắn."},
+                ]),
+                correctMsg: `💥 BOOM! Suy luận ngược: ${E} + ${D} = ${E+D} → × ${C} = ${(E+D)*C} → - ${B} = ${(E+D)*C-B} → ÷ ${A} = ${correct}. Bom Ánh Sáng phát nổ!!!`
+            };
+        }
+
+        /* ================= POOL TIẾNG VIỆT ================= */
+        const pool4 = [
+            {sentence: "Những đám mây xám xịt đang bay lơ lửng trên bầu trời", options: ["Đám mây", "Xám xịt", "Lơ lửng"], correctIdx: 1, msgs: ["Đó là từ chỉ sự vật.", "", "Đó là từ chỉ hoạt động/trạng thái."]},
+            {sentence: "Chú chó mực đen tuyền chạy nhanh thoăn thoắt trên sân", options: ["Chú chó", "Đen tuyền", "Thoăn thoắt"], correctIdx: 1, msgs: ["Đó là từ chỉ sự vật.", "", "Đó là từ chỉ hoạt động."]},
+            {sentence: "Chiếc lá vàng úa rơi nhẹ nhàng xuống mặt đất", options: ["Chiếc lá", "Vàng úa", "Nhẹ nhàng"], correctIdx: 1, msgs: ["Đó là từ chỉ sự vật.", "", "Đó là từ chỉ cách thức."]},
+            {sentence: "Dòng suối trong vắt chảy róc rách qua khe đá", options: ["Dòng suối", "Trong vắt", "Róc rách"], correctIdx: 1, msgs: ["Đó là từ chỉ sự vật.", "", "Đó là từ chỉ âm thanh."]},
+            {sentence: "Bầu trời cao vời vợi điểm vài áng mây trắng muốt", options: ["Bầu trời", "Vời vợi", "Trắng muốt"], correctIdx: 1, msgs: ["Đó là từ chỉ sự vật.", "", "Đó cũng là từ chỉ đặc điểm."]},
+        ];
+        function pickPool4() {
+            let p = pool4[rInt(0, pool4.length - 1)];
+            return {
+                puzzleHTML: `<div class="puzzle-box">Chó Đá gầm gừ: "Trong câu: '${p.sentence}', từ nào là từ chỉ <strong>ĐẶC ĐIỂM</strong>?"</div>`,
+                choices: shuffle(p.options.map((opt, i) => ({text: opt, isCorrect: i === p.correctIdx, wrongMsg: p.msgs[i] || "Chó Đá cắn! Đó không phải từ chỉ đặc điểm."}))),
+                correctMsg: "Chó Đá ngoan ngoãn nằm xuống. Bạn lấy được Thuốc Hồi Máu - sẽ tự động dùng khi bị thương.",
+                fallbackRoom: 3
+            };
+        }
+
+        const pool6 = [
+            {pair: "sâu chuỗi, xuất hiện", wrong: "xâu chuỗi, suất hiện"},
+            {pair: "sản xuất, xôn xao", wrong: "xản xuất, sôn sao"},
+            {pair: "sung sướng, xinh xắn", wrong: "xung xướng, sinh sắn"},
+            {pair: "sáng suốt, xán lạn", wrong: "xáng xuốt, sán lạn"},
+        ];
+        function pickPool6() {
+            let p = pool6[rInt(0, pool6.length - 1)];
+            return {
+                correctPair: p.pair, wrongPair: p.wrong
+            };
+        }
+
+        const pool16 = [
+            {words: ["róc rách (sai: dóc dách)", "dùng dình (sai: dung dinh)", "rạng rỡ", "dẻo dai (sai: rẻo rai)"], correctIdx: 2, display: ["a) Suối chảy dóc dách", "b) Cánh hoa dung dinh", "c) Nụ cười rạng rỡ", "d) Sức khỏe rẻo rai"]},
+            {words: ["rộn ràng (sai: rộn ràng)", "rực rỡ", "dịu dàng (sai: dịu dàng)", "ránh rơi (sai: rảnh rỗi)"], correctIdx: 1, display: ["a) Tiếng nhạc rộn ràng", "b) Ánh nắng rực rỡ", "c) Giọng nói dịu dàng", "d) Ngày nghỉ ránh rơi"]},
+            {words: ["dòn tan (sai: ròn tan)", "rạng đông", "dẻo thơm (sai: rẻo thơm)", "lung linh (sai: rung rinh)"], correctIdx: 1, display: ["a) Tiếng cười dòn tan", "b) Bình minh rạng đông", "c) Hạt gạo dẻo thơm", "d) Ánh đèn lung linh"]},
+        ];
+        function pickPool16() {
+            let p = pool16[rInt(0, pool16.length - 1)];
+            return {
+                puzzleHTML: `<div class="puzzle-box">Trên tường khắc 4 từ cổ. Hãy tìm từ viết <strong>ĐÚNG</strong> chính tả:<br>${p.display.join(" &nbsp; ")}</div>`,
+                choices: shuffle(p.display.map((d, i) => ({text: d, isCorrect: i === p.correctIdx, wrongMsg: i === p.correctIdx ? "" : `Sai! '${p.words[i]}' sai chính tả.`}))),
+                correctMsg: `Chính xác! '${p.words[p.correctIdx]}' là từ duy nhất viết đúng chính tả.`
+            };
+        }
+
+        const pool17 = [
+            {idioms: ["Non xanh nước biếc", "Thức khuya dậy sớm", "Chôn rau cắt rốn", "Quê cha đất tổ"], notIdx: 1, msgs: ["Đây LÀ thành ngữ về quê hương.", "", "Đây LÀ thành ngữ về quê hương.", "Đây LÀ thành ngữ về quê hương."]},
+            {idioms: ["Non sông gấm vóc", "Dám nghĩ dám làm", "Chôn rau cắt rốn", "Thẳng cánh cò bay"], notIdx: 1, msgs: ["Đây LÀ thành ngữ về quê hương.", "", "Đây LÀ thành ngữ về quê hương.", "Đây là thành ngữ về quê hương."]},
+            {idioms: ["Quê cha đất tổ", "Học một biết mười", "Non xanh nước biếc", "Chôn rau cắt rốn"], notIdx: 1, msgs: ["Đây LÀ thành ngữ về quê hương.", "", "Đây LÀ thành ngữ về quê hương.", "Đây LÀ thành ngữ về quê hương."]},
+        ];
+        function pickPool17() {
+            let p = pool17[rInt(0, pool17.length - 1)];
+            return {
+                puzzleHTML: `<div class="puzzle-box">"${p.idioms.join("; ")}"<br>Hãy tìm thành ngữ <strong>KHÔNG</strong> nói về quê hương!</div>`,
+                choices: shuffle(p.idioms.map((idiom, i) => ({text: idiom, isCorrect: i === p.notIdx, wrongMsg: p.msgs[i]}))),
+                correctMsg: `Đúng! '${p.idioms[p.notIdx]}' nói về đức tính, KHÔNG phải thành ngữ về quê hương.`
+            };
+        }
+
+        const pool18 = [
+            {line: "Công cha như ___, nghĩa mẹ như nước trong nguồn chảy ra.", correct: "núi Thái Sơn", wrongs: ["núi cao biển rộng", "cây đại thụ", "biển Đông"]},
+            {line: "Anh em như thể ___, rách lành đùm bọc dở hay đỡ đần.", correct: "tay chân", wrongs: ["chân tay", "cá tôm", "ruột rà"]},
+            {line: "Nhiễu điều phủ lấy ___, người trong một nước phải thương nhau cùng.", correct: "giá gương", wrongs: ["tấm gương", "gương soi", "bức tranh"]},
+        ];
+        function pickPool18() {
+            let p = pool18[rInt(0, pool18.length - 1)];
+            return {
+                puzzleHTML: `<div class="puzzle-box">"${p.line}"<br>Hãy chọn từ đúng để khôi phục câu cổ ngữ!</div>`,
+                choices: shuffle([{text: p.correct, isCorrect: true, wrongMsg: ""}, ...p.wrongs.map(w => ({text: w, isCorrect: false, wrongMsg: "Sai! Đây không phải câu gốc."}))]),
+                correctMsg: `Chính xác! '${p.correct}' là đáp án đúng.`
+            };
+        }
+
+        const pool19 = [
+            {text: '"Trong lâu đài, mỗi kẻ một việc(1). Lính canh gác cổng(2). Tuần tra tháp canh. Phù thủy già lẩm nhẩm thần chú(3). Triệu hồi bóng ma. Lũ yêu tinh nhóm lò, luyện phép thuật(4)."', wrongIdx: 2, msg: "Đúng! Dấu chấm (2) cắt sai câu: 'Lính canh gác cổng, tuần tra tháp canh' là một câu."},
+            {text: '"Trong lâu đài, mỗi kẻ một việc(1). Bọn yêu tinh nhỏ gom củi khô(2). Nhóm lò lửa lớn. Phù thủy già đọc thần chú(3). Gọi gió triệu sét. Lũ quạ bay rợp trời đen kịt(4)."', wrongIdx: 2, msg: "Đúng! Dấu chấm (2) cắt sai câu: 'Bọn yêu tinh nhỏ gom củi khô, nhóm lò lửa lớn' là một câu."},
+            {text: '"Trong lâu đài, mỗi kẻ một việc(1). Phù thủy già nghiền ngẫm sách cổ(2). Tìm kiếm phép thuật. Lũ dơi treo mình trên xà nhà(3). Rỉ rả kêu suốt đêm(4)."', wrongIdx: 2, msg: "Đúng! Dấu chấm (2) cắt sai câu: 'Phù thủy già nghiền ngẫm sách cổ, tìm kiếm phép thuật' là một câu."},
+        ];
+        function pickPool19() {
+            let p = pool19[rInt(0, pool19.length - 1)];
+            return {
+                puzzleHTML: `<div class="puzzle-box">${p.text}<br>Hỏi dấu chấm số mấy bị đặt <strong>SAI</strong> vị trí?</div>`,
+                choices: shuffle([{text: "Dấu chấm (1)", isCorrect: false, wrongMsg: "Sai! Dấu chấm (1) đúng."},{text: "Dấu chấm (2)", isCorrect: p.wrongIdx===2, wrongMsg: p.wrongIdx===2?"":"Sai! Dấu chấm (2) đúng."},{text: "Dấu chấm (3)", isCorrect: p.wrongIdx===3, wrongMsg: p.wrongIdx===3?"":"Sai! Dấu chấm (3) đúng."},{text: "Dấu chấm (4)", isCorrect: p.wrongIdx===4, wrongMsg: p.wrongIdx===4?"":"Sai! Dấu chấm (4) đúng."}]),
+                correctMsg: p.msg
+            };
+        }
+
+        const pool20 = [
+            {text: "Màn đêm đen kịt bao trùm lâu đài, những ngọn nến le lói chập chờn trong gió, những bức tường rêu phong cổ kính đứng im lìm giữa màn sương.", options: ["Màn đêm", "Ngọn nến", "Đen kịt", "Bức tường"], correctIdx: 2, msgs: ["Sai! 'Màn đêm' là từ chỉ sự vật.", "Sai! 'Ngọn nến' là từ chỉ sự vật.", "", "Sai! 'Bức tường' là từ chỉ sự vật."]},
+            {text: "Lão phù thủy già nua chậm chạp bước qua hành lang tối tăm, chiếc áo choàng rách nát kéo lê trên sàn đá lạnh lẽo.", options: ["Lão phù thủy", "Chậm chạp", "Áo choàng", "Sàn đá"], correctIdx: 1, msgs: ["Sai! 'Lão phù thủy' là từ chỉ sự vật.", "", "Sai! 'Áo choàng' là từ chỉ sự vật.", "Sai! 'Sàn đá' là từ chỉ sự vật."]},
+            {text: "Ngọn lửa xanh lét bùng lên từ vạc dầu, tỏa ra thứ ánh sáng ma quái rùng rợn khắp căn phòng.", options: ["Ngọn lửa", "Vạc dầu", "Xanh lét", "Căn phòng"], correctIdx: 2, msgs: ["Sai! 'Ngọn lửa' là từ chỉ sự vật.", "Sai! 'Vạc dầu' là từ chỉ sự vật.", "", "Sai! 'Căn phòng' là từ chỉ sự vật."]},
+        ];
+        function pickPool20() {
+            let p = pool20[rInt(0, pool20.length - 1)];
+            return {
+                puzzleHTML: `<div class="puzzle-box">Đoạn văn: "${p.text}"<br>Trong các từ sau, từ nào là <strong>từ CHỈ ĐẶC ĐIỂM</strong>?</div>`,
+                choices: shuffle(p.options.map((opt, i) => ({text: opt, isCorrect: i === p.correctIdx, wrongMsg: p.msgs[i]}))),
+                correctMsg: `Đúng! '${p.options[p.correctIdx]}' là từ chỉ đặc điểm (tính từ).`
+            };
+        }
+
+        const pool21 = [
+            {poem: "Ngọn tháp vươn như lưỡi kiếm<br>Đâm thủng màn đêm u tối.", options: ["Ngọn tháp ⇔ lưỡi kiếm", "Ngọn tháp ⇔ màn đêm", "Lưỡi kiếm ⇔ màn đêm"], correctIdx: 0, msgs: ["", "Sai! Ngọn tháp ĐÂM THỦNG màn đêm (nhân hóa), không so sánh.", "Sai! Không có so sánh nào giữa lưỡi kiếm và màn đêm."]},
+            {poem: "Mặt trăng treo như chiếc đèn lồng<br>Soi sáng con đường về.", options: ["Mặt trăng ⇔ đèn lồng", "Mặt trăng ⇔ con đường", "Đèn lồng ⇔ con đường"], correctIdx: 0, msgs: ["", "Sai! Mặt trăng SOI SÁNG con đường, không so sánh.", "Sai! Không có so sánh nào giữa đèn lồng và con đường."]},
+            {poem: "Làn sương trắng như tấm khăn voan<br>Phủ kín khu rừng già.", options: ["Làn sương ⇔ khăn voan", "Làn sương ⇔ rừng già", "Khăn voan ⇔ rừng già"], correctIdx: 0, msgs: ["", "Sai! Làn sương PHỦ KÍN khu rừng, không so sánh.", "Sai! Không có so sánh nào giữa khăn voan và rừng già."]},
+        ];
+        function pickPool21() {
+            let p = pool21[rInt(0, pool21.length - 1)];
+            return {
+                puzzleHTML: `<div class="puzzle-box">"${p.poem}"<br>Trong hai câu thơ trên, sự vật nào được <strong>so sánh</strong> với sự vật nào?</div>`,
+                choices: shuffle(p.options.map((opt, i) => ({text: opt, isCorrect: i === p.correctIdx, wrongMsg: p.msgs[i]}))),
+                correctMsg: `Đúng! Hình ảnh so sánh: ${p.options[p.correctIdx]}.`
+            };
+        }
+
+        const pool25 = [
+            {sentence: "Ôi, lâu đài này thật đẹp quá!", type: "cảm", options: ["Câu cảm", "Câu kể", "Câu hỏi", "Câu khiến"], correctIdx: 0, msgs: ["", "Sai! Câu có từ 'ôi', 'quá' bày tỏ cảm xúc, đây là câu cảm.", "Sai! Đây không phải câu hỏi.", "Sai! Đây không phải câu yêu cầu."]},
+            {sentence: "Boo đang lạc trong lâu đài phép thuật.", type: "kể", options: ["Câu cảm", "Câu kể", "Câu hỏi", "Câu khiến"], correctIdx: 1, msgs: ["Sai! Câu không có từ cảm thán.", "", "Sai! Cuối câu là dấu chấm, không phải dấu chấm hỏi.", "Sai! Câu này chỉ kể lại sự việc."]},
+            {sentence: "Bạn có nhìn thấy chiếc chìa khóa bạc không?", type: "hỏi", options: ["Câu cảm", "Câu kể", "Câu hỏi", "Câu khiến"], correctIdx: 2, msgs: ["Sai! Đây là câu hỏi, không phải cảm thán.", "Sai! Cuối câu là dấu chấm hỏi.", "", "Sai! Đây là câu hỏi, không phải lời yêu cầu."]},
+            {sentence: "Hãy mở cánh cửa này ra!", type: "khiến", options: ["Câu cảm", "Câu kể", "Câu hỏi", "Câu khiến"], correctIdx: 3, msgs: ["Sai! Có dấu chấm than nhưng 'Hãy' là từ cầu khiến.", "Sai! Đây là câu cầu khiến.", "Sai! Đây không phải câu hỏi.", ""]},
+            {sentence: "Chà, ngọn đèn dầu sáng thật rực rỡ làm sao!", type: "cảm", options: ["Câu cảm", "Câu kể", "Câu hỏi", "Câu khiến"], correctIdx: 0, msgs: ["", "Sai! Câu có từ 'Chà', 'làm sao' thể hiện cảm xúc.", "Sai! Đây không phải câu hỏi.", "Sai! Đây không phải câu yêu cầu."]},
+            {sentence: "Lão phù thủy đang đọc thần chú trong phòng.", type: "kể", options: ["Câu cảm", "Câu kể", "Câu hỏi", "Câu khiến"], correctIdx: 1, msgs: ["Sai! Câu không có từ cảm thán nào.", "", "Sai! Câu kết thúc bằng dấu chấm.", "Sai! Đây chỉ là câu kể."]},
+            {sentence: "Mấy giờ thì mặt trăng lên đỉnh tháp?", type: "hỏi", options: ["Câu cảm", "Câu kể", "Câu hỏi", "Câu khiến"], correctIdx: 2, msgs: ["Sai! Đây là câu hỏi có từ để hỏi 'mấy giờ'.", "Sai! Cuối câu có dấu chấm hỏi.", "", "Sai! Đây là câu hỏi, không phải lời cầu khiến."]},
+            {sentence: "Boo ơi, hãy cẩn thận với bẫy phép!", type: "khiến", options: ["Câu cảm", "Câu kể", "Câu hỏi", "Câu khiến"], correctIdx: 3, msgs: ["Sai! Đây là lời nhắc nhở, có từ 'hãy' cầu khiến.", "Sai! Đây là câu cầu khiến (có 'hãy').", "Sai! Đây không phải câu hỏi.", ""]},
+        ];
+        function pickPool25() {
+            let p = pool25[rInt(0, pool25.length - 1)];
+            return {
+                puzzleHTML: `<div class="puzzle-box">Trên tường phòng khắc câu: <em>"${p.sentence}"</em><br>Hỏi đây là <strong>kiểu câu gì</strong>?</div>`,
+                choices: shuffle(p.options.map((opt, i) => ({text: opt, isCorrect: i === p.correctIdx, wrongMsg: p.msgs[i] || "Sai! Hãy suy nghĩ lại về kiểu câu này."}))),
+                correctMsg: `Đúng! '${p.sentence}' là ${p.options[p.correctIdx]}.`
+            };
+        }
+
+        /* ================= CƠ SỞ DỮ LIỆU CÁC PHÒNG ================= */
+        const rooms = {
+            0: {
+                title: "Trường Tiểu Học Lý Thái Tổ", emoji: "🏫", music: MUSIC_SCHOOL,
+                renderText: () => `<p>Boo là học sinh lớp <strong>3Q3</strong> trường Tiểu học Lý Thái Tổ. Hôm nay, bài kiểm tra học kì môn Toán trả về với con số <strong style="color:red;">2 điểm</strong> đỏ chói.</p>
+                                   <p>Cô Mai nhìn Boo, khẽ thở dài: <em>"Boo, sau giờ học cô muốn gặp riêng em một chút."</em></p>
+                                   <p>Hoảng sợ, Boo không dám về nhà. Cậu lén chạy lên <strong>gác xép tầng 5</strong> của trường - nơi bị khóa từ lâu vì người ta đồn có ma. Cánh cửa gỗ cũ kĩ bật mở, một luồng sáng tím hút Boo vào trong...</p>
+                                   <p style="color:#61130d; font-weight:bold;">Đây là Text Adventure giải đố kết hợp Toán & Tiếng Việt. Hãy bật âm thanh để có trải nghiệm tốt nhất!</p>`,
+                renderChoices: () => [{ text: "▶️ Bước qua cánh cổng ánh sáng", action: () => enterRoom(1), type: "action" }]
+            },
+            1: {
+                title: "Ngục Tối Lạnh Lẽo", emoji: "⛓️", music: MUSIC_DUNGEON,
+                renderText: () => {
+                    if (state.flags.ngucToiSolved) return `<p>Cánh cửa sắt đã mở. Boo không hiểu chuyện gì đang xảy ra - từ gác xép trường học, cậu đã bị hút vào một thế giới phép thuật kỳ lạ.</p>`;
+                    let q = state.q[1];
+                    return `<p>Boo tỉnh dậy trong ngục tối. Xung quanh lạnh lẽo, ẩm ướt. Trên cánh cửa sắt có một bảng khóa điện tử ma thuật phát sáng:</p>${q.puzzleHTML}`;
+                },
+                renderChoices: () => {
+                    if (state.flags.ngucToiSolved) return [{ text: "Bước ra Hành Lang Hầm", action: () => enterRoom(2), type: "action" }];
+                    let q = state.q[1];
+                    return q.choices.map(c => ({
+                        text: `Nhập mã: ${c.text}`,
+                        action: c.isCorrect ? () => { state.flags.ngucToiSolved = true; logMessage(q.correctMsg, "green"); updateUI(1); } : () => wrongAnswer(c.wrongMsg)
+                    }));
+                }
+            },
+            2: {
+                title: "Hành Lang Hầm", emoji: "🦇", music: MUSIC_DUNGEON,
+                renderText: () => `<p>Một hành lang dài dằng dặc, thỉnh thoảng có dơi bay qua. Ở đây có nhiều ngã rẽ.</p>`,
+                renderChoices: () => [
+                    { text: "Rẽ trái vào Nhà Bếp", action: () => enterRoom(3), type: "action" },
+                    { text: "Leo lên Cầu Thang Đá", action: () => enterRoom(5), type: "action" },
+                    { text: "Đi thẳng vào Hầm Mộ Cổ 🪦", action: () => enterRoom(10), type: "action" },
+                    { text: "Đi xuống Hầm Rượu Ngầm 🍷", action: () => enterRoom(11), type: "action" },
+                    { text: "Ghé Phòng Bùa Chú Cổ 📜", action: () => enterRoom(16), type: "action" },
+                    { text: "Bước vào Hành Lang Ký Tự 📝", action: () => enterRoom(19), type: "action" },
+                    { text: "Khám phá Phòng Bản Đồ Cổ 🗺️", action: () => enterRoom(22), type: "action" },
+                    { text: "Leo lên Tháp Đồng Hồ 🕰️", action: () => enterRoom(23), type: "action" },
+                    { text: "Mở Mật Thất Số Học 🔢", action: () => enterRoom(26), type: "action" },
+                    { text: "Quay lại Ngục Tối", action: () => enterRoom(1), type: "action" }
+                ]
+            },
+            3: {
+                title: "Nhà Bếp Kì Quái", emoji: "🍲", music: MUSIC_KITCHEN,
+                renderText: () => {
+                    if (state.flags.bepSolved) return `<p>Lão yêu tinh đầu bếp đang mải mê khuấy nồi súp. Cửa sổ mở ra sân sau.</p>`;
+                    let q = state.q[3];
+                    return `<p>Một lão Yêu Tinh Đầu Bếp đang nấu súp. Lão đeo một <strong>"Chìa Khóa Bạc"</strong> bên hông.</p>${q.puzzleHTML}`;
+                },
+                renderChoices: () => {
+                    let q = state.q[3];
+                    if (state.flags.bepSolved) return [
+                        { text: "Trèo qua cửa sổ ra Sân Sau", action: () => enterRoom(4), type: "action" },
+                        { text: "Quay lại Hành Lang Hầm", action: () => enterRoom(2), type: "action" }
+                    ];
+                    return q.choices.map(c => ({
+                        text: `Bảo lão cần bắt thêm: ${c.text}`,
+                        action: c.isCorrect ? () => { state.flags.bepSolved = true; getItem("KhoaBac", "Chìa Khóa Bạc 🗝️"); logMessage(q.correctMsg, "green"); updateUI(3); } : () => wrongAnswer(c.wrongMsg, q.fallbackRoom)
+                    }));
+                }
+            },
+            4: {
+                title: "Sân Sau Bỏ Hoang", emoji: "🐕", music: MUSIC_KITCHEN,
+                renderText: () => {
+                    if (state.flags.sanSauSolved) return `<p>Con Chó Đá đã ngủ say. Ở đây có một cửa ngách dẫn vào Thư Viện và một lối mòn rẽ vào Khu Vườn Cổ Tích.</p>`;
+                    let q = state.q[4];
+                    return `<p>Một con Chó Đá khổng lồ cản đường đến cánh cửa ngách. Cổ nó đeo một cái lọ <strong>"Thuốc Hồi Máu"</strong>.</p>${q.puzzleHTML}`;
+                },
+                renderChoices: () => {
+                    let q = state.q[4];
+                    if (state.flags.sanSauSolved) return [
+                        { text: "Mở cửa ngách vào Thư Viện", action: () => enterRoom(6), type: "action" },
+                        { text: "Khám phá Khu Vườn Cổ Tích 🌿", action: () => enterRoom(12), type: "action" },
+                        { text: "Bước vào Sân Vuông Huyền Bí 🏟️", action: () => enterRoom(24), type: "action" },
+                        { text: "Trèo lại vào Nhà Bếp", action: () => enterRoom(3), type: "action" }
+                    ];
+                    let arr = q.choices.map(c => ({
+                        text: c.text,
+                        action: c.isCorrect ? () => { state.flags.sanSauSolved = true; getItem("ThuocMau", "Thuốc Hồi Máu 🧪"); logMessage(q.correctMsg, "green"); updateUI(4); } : () => wrongAnswer("Chó Đá cắn! " + c.wrongMsg, q.fallbackRoom)
+                    }));
+                    arr.push({ text: "Bỏ chạy về Nhà Bếp", action: () => enterRoom(3), type: "action" });
+                    return arr;
+                }
+            },
+            5: {
+                title: "Cầu Thang Đá Vỡ Vụn", emoji: "🪜", music: MUSIC_TOWER,
+                renderText: () => {
+                    let q = state.q[5];
+                    return `<p>Cầu thang đang lơ lửng. Các bậc thang được đánh số, nhưng dẫm sai quy luật sẽ sập!</p>${q.puzzleHTML}`;
+                },
+                renderChoices: () => {
+                    let q = state.q[5];
+                    let arr = q.choices.map(c => ({
+                        text: `Nhảy lên bậc ${c.text}`,
+                        action: c.isCorrect ? () => { logMessage(q.correctMsg, "green"); enterRoom(6); } : () => wrongAnswer(c.wrongMsg, q.fallbackRoom)
+                    }));
+                    arr.push({ text: "Ghé vào Tháp Canh Cổ 🗼", action: () => enterRoom(14), type: "action" });
+                    arr.push({ text: "Ghé Tháp Chuông Ngân 🔔", action: () => enterRoom(17), type: "action" });
+                    arr.push({ text: "Đi lùi xuống Hành Lang Hầm", action: () => enterRoom(2), type: "action" });
+                    return arr;
+                }
+            },
+            6: {
+                title: "Thư Viện Hắc Ám", emoji: "📚", music: MUSIC_LIBRARY,
+                renderText: () => {
+                    let txt = `<p>Sách bay loạn xạ. Ở giữa phòng có một cánh cửa gỗ lớn dẫn lên Đỉnh Tháp.</p>`;
+                    if (!state.flags.thuVienUnlocked) txt += `<p style="color:gray;">Cửa gỗ bị khóa chặt. Cần có <strong>Chìa Khóa Bạc</strong> để mở.</p>`;
+                    else if (!state.flags.thuVienSolved) {
+                        let q = state.q[6];
+                        txt += `<div class="puzzle-box">Cuốn sách ma chặn đường: "Điền 's' hay 'x': <strong>${q.correctPair}</strong> hay <strong>${q.wrongPair}</strong>?"</div>`;
+                    }
+                    else txt += `<p>Đường lên Phòng Chế Thuật đã thông suốt.</p>`;
+                    return txt;
+                },
+                renderChoices: () => {
+                    let choices = [];
+                    if (!state.flags.thuVienUnlocked) {
+                        if (state.inventory.includes("KhoaBac")) {
+                            choices.push({ text: "Dùng Chìa Khóa Bạc mở cửa", action: () => { state.flags.thuVienUnlocked = true; updateUI(6); }, type: "action" });
+                        } else {
+                            choices.push({ text: "(Bạn chưa có Chìa Khóa Bạc, hãy tìm ở tầng dưới)", action: () => {}, type: "action" });
+                        }
+                    } else if (!state.flags.thuVienSolved) {
+                        let q = state.q[6];
+                        choices.push({ text: `s, x (${q.correctPair})`, action: () => { state.flags.thuVienSolved = true; updateUI(6); } });
+                        choices.push({ text: `x, s (${q.wrongPair})`, action: () => wrongAnswer("Sách cắn! Sai chính tả rồi.") });
+                    } else {
+                        choices.push({ text: "Đi lên Phòng Chế Thuật", action: () => enterRoom(7), type: "action" });
+                    }
+                    choices.push({ text: "Mở cửa ngách ra Sân Sau", action: () => enterRoom(4), type: "action" });
+                    choices.push({ text: "Đi xuống Cầu Thang Đá", action: () => enterRoom(5), type: "action" });
+                    choices.push({ text: "Bước vào Phòng Gương Ma Thuật 🪞", action: () => enterRoom(15), type: "action" });
+                    choices.push({ text: "Vào Phòng Thư Pháp Cổ ✍️", action: () => enterRoom(18), type: "action" });
+                    return choices;
+                }
+            },
+            7: {
+                title: "Phòng Chế Thuật", emoji: "🧪", music: MUSIC_LIBRARY,
+                renderText: () => {
+                    if (state.flags.phongCheThuatSolved) return `<p>Bạn đã có Bom Ánh Sáng. Cầu thang xoắn ốc dẫn thẳng lên Đỉnh Tháp đánh Boss!</p>`;
+                    if (state.fragments.length < TOTAL_FRAGMENTS) {
+                        return `<p>Để pha chế <strong>"Quả Bom Ánh Sáng"</strong> - thứ vũ khí duy nhất có thể phá hủy Khiên Chống Phép của lão Phù Thủy - Boo cần thu thập đủ <strong>${TOTAL_FRAGMENTS} Mảnh Ấn Triệu Hồi</strong> rải rác khắp các căn phòng trong lâu đài.</p>
+                                <p style="color:#c9a96e;">📜 Hiện tại đã có: <strong>${state.fragments.length}/${TOTAL_FRAGMENTS}</strong> Mảnh Ấn. Còn thiếu <strong>${TOTAL_FRAGMENTS - state.fragments.length}</strong> mảnh.</p>
+                                <p style="color:#888;">Hãy khám phá hết mọi ngóc ngách của lâu đài, giải hết các câu đố để thu thập đủ Mảnh Ấn rồi quay lại đây!</p>`;
+                    }
+                    let q = state.q[7];
+                    return `<p>Tất cả ${TOTAL_FRAGMENTS} Mảnh Ấn đã hội tụ! Boo có thể pha chế <strong>"Quả Bom Ánh Sáng"</strong>.</p>${q.puzzleHTML}`;
+                },
+                renderChoices: () => {
+                    let q = state.q[7];
+                    if (state.flags.phongCheThuatSolved) return [
+                        { text: "⚔️ Lên Đỉnh Tháp (Đánh Boss)", action: () => enterRoom(8), type: "action" },
+                        { text: "Quay lại Thư Viện", action: () => enterRoom(6), type: "action" }
+                    ];
+                    if (state.fragments.length < TOTAL_FRAGMENTS) return [
+                        { text: "Quay lại Thư Viện để tìm thêm Mảnh Ấn", action: () => enterRoom(6), type: "action" }
+                    ];
+                    let arr = q.choices.map(c => ({
+                        text: `Nhỏ ${c.text}`,
+                        action: c.isCorrect ? () => { state.flags.phongCheThuatSolved = true; getItem("BomAnhSang", "Bom Ánh Sáng 💣"); logMessage(q.correctMsg, "green"); updateUI(7); } : () => wrongAnswer(c.wrongMsg, q.fallbackRoom)
+                    }));
+                    arr.push({ text: "Quay lại Thư Viện", action: () => enterRoom(6), type: "action" });
+                    return arr;
+                }
+            },
+            8: {
+                title: "Đỉnh Tháp - Phù Thủy Thời Gian", emoji: "🧙‍♂️", music: MUSIC_BATTLE,
+                renderText: () => {
+                    if (state.flags.bossDefeated) return `<p style="color:#2b5c2b; font-weight:bold; font-size: 20px;">💥 Quả Bom Ánh Sáng nổ tung! Lão Phù Thủy Thời Gian gào thét và tan biến thành cát bụi. Một cánh cổng không gian mở ra. Boo bước qua và trở về trường học an toàn.<br><br>🏆 CHIẾN THẮNG!!! 🏆</p>`;
+                    if (!state.inventory.includes("BomAnhSang")) return `<p>Lão phù thủy đang bật Khiên Chống Phép! Bạn không có Bom Ánh Sáng để phá khiên!</p>`;
+
+                    let phase = state.bossPhase;
+                    let hp = 5 - phase;
+                    let hpBar = "❤️".repeat(hp) + "🖤".repeat(phase);
+                    let text = "";
+
+                    if (phase === 0) {
+                        text = `<p style="font-size:18px; font-weight:bold; color:#cc2222;">🧙‍♂️ LÃO PHÙ THỦY THỜI GIAN xuất hiện!</p>
+                                <p style="font-size:20px;">${hpBar}</p>
+                                <p>"Hahaha! Ngươi dám cả gan xông vào đây ư? Một đứa nhóc lớp 3 mà đòi đánh bại ta? Để xem ngươi có đủ thông minh để vượt qua 5 thử thách của ta không!"</p>
+                                <p style="color:#c9a96e;">⚔️ Cần <strong>4 mũi tên thần</strong> xuyên giáp, rồi <strong>Bom Ánh Sáng</strong> kết liễu!</p>`;
+                        if (!state.q[8] || state.q[8]._phase !== 0) { state.q[8] = genBossPhase1(); state.q[8]._phase = 0; }
+                    } else if (phase >= 1 && phase <= 3) {
+                        text = `<p style="font-size:20px;">${hpBar}</p>
+                                <p style="color:#c9a96e;">🏹 Mũi tên thần thứ <strong>${phase}</strong> đã bắn trúng! Lão phù thủy lảo đảo lùi lại!</p>`;
+                        if (!state.q[8] || state.q[8]._phase !== phase) {
+                            let gens = [null, genBossPhase2, genBossPhase3, genBossPhase4];
+                            state.q[8] = gens[phase](); state.q[8]._phase = phase;
+                        }
+                    } else if (phase === 4) {
+                        text = `<p style="font-size:20px;">${hpBar}</p>
+                                <p style="color:#c9a96e;">⚡ Cả 4 mũi tên thần đã xuyên thủng lớp giáp phép! Lão phù thủy quỳ gối, yếu ớt!</p>
+                                <p style="font-weight:bold;">💣 ĐÃ ĐẾN LÚC KÍCH HOẠT <strong>BOM ÁNH SÁNG</strong>!</p>`;
+                        if (!state.q[8] || state.q[8]._phase !== 4) { state.q[8] = genBossPhase5(); state.q[8]._phase = 4; }
+                    }
+
+                    return text + (state.q[8] ? state.q[8].puzzleHTML : "");
+                },
+                renderChoices: () => {
+                    if (state.flags.bossDefeated) return [];
+                    if (!state.inventory.includes("BomAnhSang")) return [
+                        { text: "⬅️ Lãnh trọn tia sét và văng về Thư Viện", action: () => wrongAnswer("Bị sét đánh vì không phá được khiên!", 6) }
+                    ];
+                    let q = state.q[8];
+                    if (!q) return [];
+                    return q.choices.map(c => ({
+                        text: c.text,
+                        action: c.isCorrect ? () => {
+                            state.bossPhase++;
+                            logMessage(c.correctMsg, "green");
+                            if (state.bossPhase >= 5) {
+                                state.flags.bossDefeated = true;
+                                logMessage("💥 BOOM! Bom Ánh Sáng phát nổ! Lão Phù Thủy Thời Gian đã bị tiêu diệt hoàn toàn!!!", "green");
+                            }
+                            updateUI(8);
+                        } : () => wrongAnswer(c.wrongMsg)
+                    }));
+                }
+            },
+            10: {
+                title: "Hầm Mộ Cổ Xưa", emoji: "🪦", music: MUSIC_DUNGEON,
+                renderText: () => {
+                    if (state.flags.hamMoTuSolved) return `<p>Ngôi mộ đã mở, để lộ một cây <strong>Đèn Dầu</strong> cổ vẫn còn cháy. Có lối quay lại Hành Lang Hầm.</p>`;
+                    let q = state.q[10];
+                    return `<p>Một ngôi mộ đá khổng lồ chắn ngang đường. Trên nắp mộ khắc dòng chữ ma thuật lấp lánh:</p>${q.puzzleHTML}`;
+                },
+                renderChoices: () => {
+                    let q = state.q[10];
+                    if (state.flags.hamMoTuSolved) {
+                        let choices = [{ text: "Quay lại Hành Lang Hầm", action: () => enterRoom(2), type: "action" }];
+                        if (!state.inventory.includes("DenDau")) {
+                            choices.unshift({ text: "Nhặt Đèn Dầu 🪔", action: () => { getItem("DenDau", "Đèn Dầu 🪔"); logMessage("Bạn nhặt được Đèn Dầu cổ vẫn còn cháy!", "green"); updateUI(10); }, type: "action" });
+                        }
+                        return choices;
+                    }
+                    let arr = q.choices.map(c => ({
+                        text: c.text,
+                        action: c.isCorrect ? () => { state.flags.hamMoTuSolved = true; collectFragment(10); logMessage(q.correctMsg, "green"); updateUI(10); } : () => wrongAnswer(c.wrongMsg)
+                    }));
+                    arr.push({ text: "Quay lại Hành Lang Hầm", action: () => enterRoom(2), type: "action" });
+                    return arr;
+                }
+            },
+            11: {
+                title: "Hầm Rượu Ngầm", emoji: "🍷", music: MUSIC_KITCHEN,
+                renderText: () => {
+                    if (!state.flags.hamRuouUnlocked) return `<p style="color:gray;">Quá tối để nhìn thấy gì! Bạn cần có <strong>Đèn Dầu</strong> mới vào được.</p>`;
+                    if (state.flags.hamRuouSolved) return `<p>Hai thùng rượu đã được mở khóa. Trên kệ có một bình <strong>Rượu Hồi Phục</strong> lấp lánh ánh vàng.</p>`;
+                    let q = state.q[11];
+                    return `<p>Hai thùng rượu khổng lồ bị khóa phép. Trên thùng A và B có dòng chữ:</p>${q.puzzleHTML}`;
+                },
+                renderChoices: () => {
+                    if (!state.flags.hamRuouUnlocked) {
+                        let choices = [{ text: "Quay lại Hành Lang Hầm", action: () => enterRoom(2), type: "action" }];
+                        if (state.inventory.includes("DenDau")) {
+                            choices.unshift({ text: "Dùng Đèn Dầu thắp sáng", action: () => { state.flags.hamRuouUnlocked = true; logMessage("Đèn Dầu bừng sáng, soi tỏ cả hầm rượu!", "green"); updateUI(11); }, type: "action" });
+                        }
+                        return choices;
+                    }
+                    if (state.flags.hamRuouSolved) {
+                        let choices = [{ text: "Quay lại Hành Lang Hầm", action: () => enterRoom(2), type: "action" }];
+                        if (!state.inventory.includes("RuouHoiPhuc")) {
+                            choices.unshift({ text: "Nhặt Rượu Hồi Phục 🍷", action: () => { getItem("RuouHoiPhuc", "Rượu Hồi Phục 🍷"); logMessage("Bạn nhận được Rượu Hồi Phục!", "green"); updateUI(11); }, type: "action" });
+                        }
+                        return choices;
+                    }
+                    let q = state.q[11];
+                    let arr = q.choices.map(c => ({
+                        text: c.text,
+                        action: c.isCorrect ? () => { state.flags.hamRuouSolved = true; collectFragment(11); logMessage(q.correctMsg, "green"); updateUI(11); } : () => wrongAnswer(c.wrongMsg)
+                    }));
+                    arr.push({ text: "Quay lại Hành Lang Hầm", action: () => enterRoom(2), type: "action" });
+                    return arr;
+                }
+            },
+            12: {
+                title: "Khu Vườn Cổ Tích", emoji: "🌿", music: MUSIC_GARDEN,
+                renderText: () => {
+                    if (state.flags.khuVuonCoSolved) return `<p>Khu vườn rực rỡ ánh sáng huyền ảo. Một lối mòn dẫn đến <strong>Đài Phun Nước</strong> lấp lánh phía xa.</p>`;
+                    let q = state.q[12];
+                    return `<p>Một khu vườn với những luống hoa được sắp xếp kỳ lạ. Trên cổng vườn khắc:</p>${q.puzzleHTML}`;
+                },
+                renderChoices: () => {
+                    let q = state.q[12];
+                    if (state.flags.khuVuonCoSolved) return [
+                        { text: "Đi đến Đài Phun Nước", action: () => enterRoom(13), type: "action" },
+                        { text: "Dạo bước vào Vườn Ngữ Nghĩa 🌺", action: () => enterRoom(20), type: "action" },
+                        { text: "Quay lại Sân Sau", action: () => enterRoom(4), type: "action" }
+                    ];
+                    let arr = q.choices.map(c => ({
+                        text: c.text,
+                        action: c.isCorrect ? () => { state.flags.khuVuonCoSolved = true; collectFragment(12); logMessage(q.correctMsg, "green"); updateUI(12); } : () => wrongAnswer(c.wrongMsg)
+                    }));
+                    arr.push({ text: "Quay lại Sân Sau", action: () => enterRoom(4), type: "action" });
+                    return arr;
+                }
+            },
+            13: {
+                title: "Đài Phun Nước Huyền Bí", emoji: "⛲", music: MUSIC_GARDEN,
+                renderText: () => {
+                    if (state.flags.daiPhunNuocSolved) return `<p>Đài phun nước tuôn trào ánh sáng. Dưới đáy đài có một chiếc <strong>Bùa Hộ Mệnh</strong> lơ lửng.</p>`;
+                    let q = state.q[13];
+                    return `<p>Một đài phun nước với hai bể chứa kỳ lạ. Trên đài khắc bài toán:</p>${q.puzzleHTML}`;
+                },
+                renderChoices: () => {
+                    let q = state.q[13];
+                    if (state.flags.daiPhunNuocSolved) {
+                        let choices = [{ text: "Quay lại Khu Vườn Cổ", action: () => enterRoom(12), type: "action" }];
+                        if (!state.inventory.includes("BuaHoMenh")) {
+                            choices.unshift({ text: "Nhặt Bùa Hộ Mệnh 🛡️ (+2 HP tối đa)", action: () => { state.maxHp += 2; state.hp += 2; getItem("BuaHoMenh", "Bùa Hộ Mệnh 🛡️"); logMessage("Bùa Hộ Mệnh! HP tối đa tăng lên " + state.maxHp + "!", "green"); updateUI(13); }, type: "action" });
+                        }
+                        return choices;
+                    }
+                    let arr = q.choices.map(c => ({
+                        text: c.text,
+                        action: c.isCorrect ? () => { state.flags.daiPhunNuocSolved = true; collectFragment(13); logMessage(q.correctMsg, "green"); updateUI(13); } : () => wrongAnswer(c.wrongMsg)
+                    }));
+                    arr.push({ text: "Quay lại Khu Vườn Cổ", action: () => enterRoom(12), type: "action" });
+                    return arr;
+                }
+            },
+            14: {
+                title: "Tháp Canh Cổ Kính", emoji: "🗼", music: MUSIC_TOWER,
+                renderText: () => {
+                    if (state.flags.thapCanhSolved) return `<p>Ngọn đèn trên đỉnh tháp đã được thắp sáng. Một chiếc <strong>Mắt Đại Bàng</strong> lơ lửng trong không trung.</p>`;
+                    let q = state.q[14];
+                    return `<p>Một ngọn tháp canh bỏ hoang. Trên tường có khắc hai con số bí ẩn A và B:</p>${q.puzzleHTML}`;
+                },
+                renderChoices: () => {
+                    let q = state.q[14];
+                    if (state.flags.thapCanhSolved) {
+                        let choices = [{ text: "Quay lại Cầu Thang Đá", action: () => enterRoom(5), type: "action" }];
+                        if (!state.inventory.includes("MatDaiBang")) {
+                            choices.unshift({ text: "Nhặt Mắt Đại Bàng 🦅", action: () => { getItem("MatDaiBang", "Mắt Đại Bàng 🦅"); logMessage("Mắt Đại Bàng cho bạn khả năng nhìn thấy những cánh cửa ẩn!", "green"); updateUI(14); }, type: "action" });
+                        }
+                        return choices;
+                    }
+                    let arr = q.choices.map(c => ({
+                        text: c.text,
+                        action: c.isCorrect ? () => { state.flags.thapCanhSolved = true; collectFragment(14); logMessage(q.correctMsg, "green"); updateUI(14); } : () => wrongAnswer(c.wrongMsg)
+                    }));
+                    arr.push({ text: "Quay lại Cầu Thang Đá", action: () => enterRoom(5), type: "action" });
+                    return arr;
+                }
+            },
+            15: {
+                title: "Phòng Gương Ma Thuật", emoji: "🪞", music: MUSIC_LIBRARY,
+                renderText: () => {
+                    if (!state.flags.phongGuongUnlocked) return `<p style="color:gray;">Một lớp sương mù dày đặc che khuất tầm nhìn. Bạn cần có <strong>Mắt Đại Bàng</strong> mới nhìn xuyên qua được.</p>`;
+                    if (state.flags.phongGuongSolved) return `<p>Những tấm gương đã ngừng xoay. Trên bệ đá xuất hiện viên <strong>Ngọc Thời Gian 💎</strong> - bảo vật tối thượng của lâu đài!</p>`;
+                    let q = state.q[15];
+                    return `<p>Những tấm gương khổng lồ xoay tròn, phản chiếu những phép toán kỳ dị:</p>${q.puzzleHTML}`;
+                },
+                renderChoices: () => {
+                    if (!state.flags.phongGuongUnlocked) {
+                        let choices = [{ text: "Quay lại Thư Viện", action: () => enterRoom(6), type: "action" }];
+                        if (state.inventory.includes("MatDaiBang")) {
+                            choices.unshift({ text: "Dùng Mắt Đại Bàng nhìn xuyên sương", action: () => { state.flags.phongGuongUnlocked = true; logMessage("Mắt Đại Bàng xuyên thấu màn sương! Căn phòng hiện ra.", "green"); updateUI(15); }, type: "action" });
+                        }
+                        return choices;
+                    }
+                    if (state.flags.phongGuongSolved) {
+                        let choices = [
+                            { text: "Quay lại Thư Viện", action: () => enterRoom(6), type: "action" },
+                            { text: "Bước vào Điện Thơ Ca 📖", action: () => enterRoom(21), type: "action" }
+                        ];
+                        if (!state.inventory.includes("NgocThoiGian")) {
+                            choices.unshift({ text: "Nhặt Ngọc Thời Gian 💎", action: () => { getItem("NgocThoiGian", "Ngọc Thời Gian 💎"); logMessage("Bạn nhận được Ngọc Thời Gian - bảo vật huyền thoại!", "green"); updateUI(15); }, type: "action" });
+                        }
+                        return choices;
+                    }
+                    let q = state.q[15];
+                    let arr = q.choices.map(c => ({
+                        text: c.text,
+                        action: c.isCorrect ? () => { state.flags.phongGuongSolved = true; collectFragment(15); logMessage(q.correctMsg, "green"); updateUI(15); } : () => wrongAnswer(c.wrongMsg)
+                    }));
+                    arr.push({ text: "Quay lại Thư Viện", action: () => enterRoom(6), type: "action" });
+                    return arr;
+                }
+            },
+            16: {
+                title: "Phòng Bùa Chú Cổ", emoji: "📜", music: MUSIC_DUNGEON,
+                renderText: () => {
+                    if (state.flags.buaChuSolved) return `<p>Bùa chú đã được hóa giải. Trên bàn còn lại một chiếc <strong>Bút Lông Vũ</strong> phát sáng.</p>`;
+                    let q = state.q[16];
+                    return `<p>Những tờ bùa chú viết tay dán đầy tường. Nhưng có vẻ lão phù thủy viết sai chính tả!</p>${q.puzzleHTML}`;
+                },
+                renderChoices: () => {
+                    let q = state.q[16];
+                    if (state.flags.buaChuSolved) {
+                        let choices = [{ text: "Quay lại Hành Lang Hầm", action: () => enterRoom(2), type: "action" }];
+                        if (!state.inventory.includes("ButLongVu")) {
+                            choices.unshift({ text: "Nhặt Bút Lông Vũ 🪶", action: () => { getItem("ButLongVu", "Bút Lông Vũ 🪶"); logMessage("Bạn nhận được Bút Lông Vũ - ngòi bút phép thuật!", "green"); updateUI(16); }, type: "action" });
+                        }
+                        return choices;
+                    }
+                    let arr = q.choices.map(c => ({
+                        text: c.text,
+                        action: c.isCorrect ? () => { state.flags.buaChuSolved = true; collectFragment(16); logMessage(q.correctMsg, "green"); updateUI(16); } : () => wrongAnswer(c.wrongMsg)
+                    }));
+                    arr.push({ text: "Quay lại Hành Lang Hầm", action: () => enterRoom(2), type: "action" });
+                    return arr;
+                }
+            },
+            17: {
+                title: "Tháp Chuông Ngân", emoji: "🔔", music: MUSIC_TOWER,
+                renderText: () => {
+                    if (state.flags.thapChuongSolved) return `<p>Chuông đã ngân vang khắp tháp. Trên đỉnh chuông khảm một viên <strong>Chuông Ngân</strong> lấp lánh.</p>`;
+                    let q = state.q[17];
+                    return `<p>Một quả chuông khổng lồ treo giữa tháp. Trên thân chuông khắc những thành ngữ cổ:</p>${q.puzzleHTML}`;
+                },
+                renderChoices: () => {
+                    let q = state.q[17];
+                    if (state.flags.thapChuongSolved) {
+                        let choices = [{ text: "Quay lại Cầu Thang Đá", action: () => enterRoom(5), type: "action" }];
+                        if (!state.inventory.includes("ChuongNgan")) {
+                            choices.unshift({ text: "Nhặt Chuông Ngân 🔔", action: () => { getItem("ChuongNgan", "Chuông Ngân 🔔"); logMessage("Chuông Ngân rung lên! Âm thanh lan tỏa khắp lâu đài.", "green"); updateUI(17); }, type: "action" });
+                        }
+                        return choices;
+                    }
+                    let arr = q.choices.map(c => ({
+                        text: c.text,
+                        action: c.isCorrect ? () => { state.flags.thapChuongSolved = true; collectFragment(17); logMessage(q.correctMsg, "green"); updateUI(17); } : () => wrongAnswer(c.wrongMsg)
+                    }));
+                    arr.push({ text: "Quay lại Cầu Thang Đá", action: () => enterRoom(5), type: "action" });
+                    return arr;
+                }
+            },
+            18: {
+                title: "Phòng Thư Pháp Cổ", emoji: "✍️", music: MUSIC_LIBRARY,
+                renderText: () => {
+                    if (state.flags.thuPhapSolved) return `<p>Bức thư pháp đã hoàn chỉnh. Một cuốn <strong>Sách Cổ</strong> hiện ra từ kệ sách bí mật.</p>`;
+                    let q = state.q[18];
+                    return `<p>Một bức thư pháp cổ khổng lồ treo giữa phòng, tương truyền do chính lão phù thủy viết ra. Nhưng một dòng chữ đã bị phép thuật xóa mờ:</p>${q.puzzleHTML}`;
+                },
+                renderChoices: () => {
+                    let q = state.q[18];
+                    if (state.flags.thuPhapSolved) {
+                        let choices = [{ text: "Quay lại Thư Viện", action: () => enterRoom(6), type: "action" }];
+                        if (!state.inventory.includes("SachCo")) {
+                            choices.unshift({ text: "Nhặt Sách Cổ 📕", action: () => { getItem("SachCo", "Sách Cổ 📕"); logMessage("Sách Cổ mở ra, chứa đựng tri thức ngàn đời!", "green"); updateUI(18); }, type: "action" });
+                        }
+                        return choices;
+                    }
+                    let arr = q.choices.map(c => ({
+                        text: c.text,
+                        action: c.isCorrect ? () => { state.flags.thuPhapSolved = true; collectFragment(18); logMessage(q.correctMsg, "green"); updateUI(18); } : () => wrongAnswer(c.wrongMsg)
+                    }));
+                    arr.push({ text: "Quay lại Thư Viện", action: () => enterRoom(6), type: "action" });
+                    return arr;
+                }
+            },
+            19: {
+                title: "Hành Lang Ký Tự", emoji: "📝", music: MUSIC_DUNGEON,
+                renderText: () => {
+                    if (state.flags.hanhLangKyTuSolved) return `<p>Dấu câu đã được sửa đúng. Trên bệ đá xuất hiện chiếc <strong>La Bàn Ngữ Pháp</strong>.</p>`;
+                    let q = state.q[19];
+                    return `<p>Một hành lang dài với những dòng chữ cổ khắc trên tường đá. Nhưng có vẻ lão phù thủy đã đặt dấu chấm sai vị trí khi khắc chú!</p>${q.puzzleHTML}`;
+                },
+                renderChoices: () => {
+                    let q = state.q[19];
+                    if (state.flags.hanhLangKyTuSolved) {
+                        let choices = [{ text: "Quay lại Hành Lang Hầm", action: () => enterRoom(2), type: "action" },
+                                       { text: "Bước vào Thư Phòng Ngôn Từ 📝", action: () => enterRoom(25), type: "action" }];
+                        if (!state.inventory.includes("LaBanNguPhap")) {
+                            choices.unshift({ text: "Nhặt La Bàn Ngữ Pháp 🧭", action: () => { getItem("LaBanNguPhap", "La Bàn Ngữ Pháp 🧭"); logMessage("La Bàn Ngữ Pháp chỉ đường đến những bí mật ngôn từ!", "green"); updateUI(19); }, type: "action" });
+                        }
+                        return choices;
+                    }
+                    let arr = q.choices.map(c => ({
+                        text: c.text,
+                        action: c.isCorrect ? () => { state.flags.hanhLangKyTuSolved = true; collectFragment(19); logMessage(q.correctMsg, "green"); updateUI(19); } : () => wrongAnswer(c.wrongMsg)
+                    }));
+                    arr.push({ text: "Quay lại Hành Lang Hầm", action: () => enterRoom(2), type: "action" });
+                    return arr;
+                }
+            },
+            20: {
+                title: "Vườn Ngữ Nghĩa", emoji: "🌺", music: MUSIC_GARDEN,
+                renderText: () => {
+                    if (state.flags.vuonNguNghiaSolved) return `<p>Những bông hoa ngữ nghĩa nở rộ. Một <strong>Hạt Giống Tri Thức</strong> lơ lửng giữa vườn.</p>`;
+                    let q = state.q[20];
+                    return `<p>Một khu vườn ma thuật nơi những bông hoa đen thì thầm những từ ngữ cổ xưa. Muốn hái được bảo vật, Boo phải phân biệt được các loại từ:</p>${q.puzzleHTML}`;
+                },
+                renderChoices: () => {
+                    let q = state.q[20];
+                    if (state.flags.vuonNguNghiaSolved) {
+                        let choices = [{ text: "Quay lại Khu Vườn Cổ Tích", action: () => enterRoom(12), type: "action" }];
+                        if (!state.inventory.includes("HatGiongTriThuc")) {
+                            choices.unshift({ text: "Nhặt Hạt Giống Tri Thức 🌱", action: () => { getItem("HatGiongTriThuc", "Hạt Giống Tri Thức 🌱"); logMessage("Hạt Giống Tri Thức nảy mầm trong tâm trí bạn!", "green"); updateUI(20); }, type: "action" });
+                        }
+                        return choices;
+                    }
+                    let arr = q.choices.map(c => ({
+                        text: c.text,
+                        action: c.isCorrect ? () => { state.flags.vuonNguNghiaSolved = true; collectFragment(20); logMessage(q.correctMsg, "green"); updateUI(20); } : () => wrongAnswer(c.wrongMsg)
+                    }));
+                    arr.push({ text: "Quay lại Khu Vườn Cổ Tích", action: () => enterRoom(12), type: "action" });
+                    return arr;
+                }
+            },
+            21: {
+                title: "Điện Thơ Ca", emoji: "📖", music: MUSIC_LIBRARY,
+                renderText: () => {
+                    if (state.flags.dienThoCaSolved) return `<p>Bài thơ đã được giải mã. Một viên <strong>Ngọc Thơ</strong> tỏa sáng trên bệ thờ.</p>`;
+                    let q = state.q[21];
+                    return `<p>Một điện thờ cổ kính trong lâu đài, trên tường khắc những vần thơ huyền bí bằng thứ ngôn ngữ đã thất truyền:</p>${q.puzzleHTML}`;
+                },
+                renderChoices: () => {
+                    let q = state.q[21];
+                    if (state.flags.dienThoCaSolved) {
+                        let choices = [{ text: "Quay lại Phòng Gương", action: () => enterRoom(15), type: "action" }];
+                        if (!state.inventory.includes("NgocTho")) {
+                            choices.unshift({ text: "Nhặt Ngọc Thơ 💠", action: () => { getItem("NgocTho", "Ngọc Thơ 💠"); logMessage("Ngọc Thơ lấp lánh - tinh hoa của ngôn từ Việt!", "green"); updateUI(21); }, type: "action" });
+                        }
+                        return choices;
+                    }
+                    let arr = q.choices.map(c => ({
+                        text: c.text,
+                        action: c.isCorrect ? () => { state.flags.dienThoCaSolved = true; collectFragment(21); logMessage(q.correctMsg, "green"); updateUI(21); } : () => wrongAnswer(c.wrongMsg)
+                    }));
+                    arr.push({ text: "Quay lại Phòng Gương", action: () => enterRoom(15), type: "action" });
+                    return arr;
+                }
+            },
+            22: {
+                title: "Phòng Bản Đồ Cổ", emoji: "🗺️", music: MUSIC_LIBRARY,
+                renderText: () => {
+                    if (state.flags.banDoCoSolved) return `<p>Tấm bản đồ đã được giải mã. Một <strong>La Bàn Cổ</strong> hiện ra từ ngăn bí mật.</p>`;
+                    let q = state.q[22];
+                    return `<p>Một tấm bản đồ cổ khổng lồ trải dài trên bàn đá. Những con số lấp lánh trên đó là tọa độ của kho báu. Để đọc được bản đồ, Boo phải tính diện tích thửa ruộng ma thuật được vẽ trên đó:</p>${q.puzzleHTML}`;
+                },
+                renderChoices: () => {
+                    let q = state.q[22];
+                    if (state.flags.banDoCoSolved) {
+                        let choices = [{ text: "Quay lại Hành Lang Hầm", action: () => enterRoom(2), type: "action" }];
+                        if (!state.inventory.includes("LaBanCo")) {
+                            choices.unshift({ text: "Nhặt La Bàn Cổ 🧭", action: () => { getItem("LaBanCo", "La Bàn Cổ 🧭"); logMessage("La Bàn Cổ chỉ đường đến những vùng đất bí ẩn!", "green"); updateUI(22); }, type: "action" });
+                        }
+                        return choices;
+                    }
+                    let arr = q.choices.map(c => ({
+                        text: c.text,
+                        action: c.isCorrect ? () => { state.flags.banDoCoSolved = true; collectFragment(22); logMessage(q.correctMsg, "green"); updateUI(22); } : () => wrongAnswer(c.wrongMsg)
+                    }));
+                    arr.push({ text: "Quay lại Hành Lang Hầm", action: () => enterRoom(2), type: "action" });
+                    return arr;
+                }
+            },
+            23: {
+                title: "Tháp Đồng Hồ Thời Gian", emoji: "🕰️", music: MUSIC_TOWER,
+                renderText: () => {
+                    if (state.flags.thapDongHoSolved) return `<p>Chiếc đồng hồ đã điểm đúng giờ. Một chiếc <strong>Đồng Hồ Cát</strong> phát sáng trên bệ đá.</p>`;
+                    let q = state.q[23];
+                    return `<p>Một ngọn tháp cao với chiếc đồng hồ khổng lồ trên đỉnh. Muốn lên được đỉnh tháp, Boo phải vượt qua thử thách thời gian:</p>${q.puzzleHTML}`;
+                },
+                renderChoices: () => {
+                    let q = state.q[23];
+                    if (state.flags.thapDongHoSolved) {
+                        let choices = [{ text: "Quay lại Hành Lang Hầm", action: () => enterRoom(2), type: "action" }];
+                        if (!state.inventory.includes("DongHoCat")) {
+                            choices.unshift({ text: "Nhặt Đồng Hồ Cát ⏳", action: () => { getItem("DongHoCat", "Đồng Hồ Cát ⏳"); logMessage("Đồng Hồ Cát cho phép tua ngược thời gian một lần!", "green"); updateUI(23); }, type: "action" });
+                        }
+                        return choices;
+                    }
+                    let arr = q.choices.map(c => ({
+                        text: c.text,
+                        action: c.isCorrect ? () => { state.flags.thapDongHoSolved = true; collectFragment(23); logMessage(q.correctMsg, "green"); updateUI(23); } : () => wrongAnswer(c.wrongMsg)
+                    }));
+                    arr.push({ text: "Quay lại Hành Lang Hầm", action: () => enterRoom(2), type: "action" });
+                    return arr;
+                }
+            },
+            24: {
+                title: "Sân Vuông Huyền Bí", emoji: "🏟️", music: MUSIC_KITCHEN,
+                renderText: () => {
+                    if (state.flags.sanVuongSolved) return `<p>Hàng rào phép đã dựng xong. Một chiếc <strong>Khiên Rùa</strong> xuất hiện giữa sân.</p>`;
+                    let q = state.q[24];
+                    return `<p>Một sân đấu cổ đại với những chiến binh đá đứng canh bốn góc. Họ cần biết chu vi sân để dựng hàng rào phép thuật bảo vệ lâu đài:</p>${q.puzzleHTML}`;
+                },
+                renderChoices: () => {
+                    let q = state.q[24];
+                    if (state.flags.sanVuongSolved) {
+                        let choices = [{ text: "Quay lại Sân Sau", action: () => enterRoom(4), type: "action" }];
+                        if (!state.inventory.includes("KhienRua")) {
+                            choices.unshift({ text: "Nhặt Khiên Rùa 🐢 (+1 HP tối đa)", action: () => { state.maxHp += 1; state.hp += 1; getItem("KhienRua", "Khiên Rùa 🐢"); logMessage("Khiên Rùa! HP tối đa tăng lên " + state.maxHp + "!", "green"); updateUI(24); }, type: "action" });
+                        }
+                        return choices;
+                    }
+                    let arr = q.choices.map(c => ({
+                        text: c.text,
+                        action: c.isCorrect ? () => { state.flags.sanVuongSolved = true; collectFragment(24); logMessage(q.correctMsg, "green"); updateUI(24); } : () => wrongAnswer(c.wrongMsg)
+                    }));
+                    arr.push({ text: "Quay lại Sân Sau", action: () => enterRoom(4), type: "action" });
+                    return arr;
+                }
+            },
+            25: {
+                title: "Thư Phòng Ngôn Từ", emoji: "📝", music: MUSIC_LIBRARY,
+                renderText: () => {
+                    if (state.flags.thuPhongNgonTuSolved) return `<p>Những câu chữ đã về đúng vị trí. Một <strong>Quyển Từ Điển Cổ</strong> bay ra từ kệ sách.</p>`;
+                    let q = state.q[25];
+                    return `<p>Một thư phòng cổ kính với những cuốn sách biết nói. Chúng thì thầm những câu văn kỳ lạ và thách đố Boo phân biệt các kiểu câu:</p>${q.puzzleHTML}`;
+                },
+                renderChoices: () => {
+                    let q = state.q[25];
+                    if (state.flags.thuPhongNgonTuSolved) {
+                        let choices = [{ text: "Quay lại Hành Lang Ký Tự", action: () => enterRoom(19), type: "action" }];
+                        if (!state.inventory.includes("TuDienCo")) {
+                            choices.unshift({ text: "Nhặt Quyển Từ Điển Cổ 📖", action: () => { getItem("TuDienCo", "Quyển Từ Điển Cổ 📖"); logMessage("Từ Điển Cổ mở ra, giải nghĩa mọi bí ẩn ngôn từ!", "green"); updateUI(25); }, type: "action" });
+                        }
+                        return choices;
+                    }
+                    let arr = q.choices.map(c => ({
+                        text: c.text,
+                        action: c.isCorrect ? () => { state.flags.thuPhongNgonTuSolved = true; collectFragment(25); logMessage(q.correctMsg, "green"); updateUI(25); } : () => wrongAnswer(c.wrongMsg)
+                    }));
+                    arr.push({ text: "Quay lại Hành Lang Ký Tự", action: () => enterRoom(19), type: "action" });
+                    return arr;
+                }
+            },
+            26: {
+                title: "Mật Thất Số Học", emoji: "🔢", music: MUSIC_DUNGEON,
+                renderText: () => {
+                    if (state.flags.matThatSoHocSolved) return `<p>Mật thất đã mở. Trên bệ đá có một chiếc <strong>Nhẫn Thông Thái</strong> lấp lánh.</p>`;
+                    let q = state.q[26];
+                    return `<p>Một căn phòng bí mật với những con số bay lơ lửng trong không trung. Chúng sắp xếp thành phép chia và thách đố Boo:</p>${q.puzzleHTML}`;
+                },
+                renderChoices: () => {
+                    let q = state.q[26];
+                    if (state.flags.matThatSoHocSolved) {
+                        let choices = [{ text: "Quay lại Hành Lang Hầm", action: () => enterRoom(2), type: "action" }];
+                        if (!state.inventory.includes("NhanThongThai")) {
+                            choices.unshift({ text: "Nhặt Nhẫn Thông Thái 💍", action: () => { getItem("NhanThongThai", "Nhẫn Thông Thái 💍"); logMessage("Nhẫn Thông Thái tỏa sáng - trí tuệ của ngàn đời!", "green"); updateUI(26); }, type: "action" });
+                        }
+                        return choices;
+                    }
+                    let arr = q.choices.map(c => ({
+                        text: c.text,
+                        action: c.isCorrect ? () => { state.flags.matThatSoHocSolved = true; collectFragment(26); logMessage(q.correctMsg, "green"); updateUI(26); } : () => wrongAnswer(c.wrongMsg)
+                    }));
+                    arr.push({ text: "Quay lại Hành Lang Hầm", action: () => enterRoom(2), type: "action" });
+                    return arr;
+                }
+            },
+            99: {
+                title: "GAME OVER", emoji: "☠️", music: MUSIC_DUNGEON,
+                renderText: () => `<p style="color:red; font-size:24px;">Bạn đã hết máu! Boo bị kẹt lại trong thế giới phép thuật mãi mãi...</p>`,
+                renderChoices: () => [{ text: "🔄 Chơi lại từ đầu", action: () => location.reload(), type: "action" }]
+            }
+        };
+
+        /* ================= CÁC HÀM XỬ LÝ LOGIC ================= */
+
+        function enterRoom(roomId) {
+            state.currentRoom = roomId;
+            if (!state.visitedRooms.includes(roomId)) state.visitedRooms.push(roomId);
+            let genMap = {1:genRoom1,3:genRoom3,5:genRoom5,7:genRoom7,10:genRoom10,11:genRoom11,12:genRoom12,13:genRoom13,14:genRoom14,15:genRoom15,22:genRoom22,23:genRoom23,24:genRoom24,26:genRoom26};
+            let pickMap = {4:pickPool4,6:pickPool6,16:pickPool16,17:pickPool17,18:pickPool18,19:pickPool19,20:pickPool20,21:pickPool21,25:pickPool25};
+            if (genMap[roomId]) state.q[roomId] = genMap[roomId]();
+            else if (pickMap[roomId]) state.q[roomId] = pickMap[roomId](); 
+            playMusic(rooms[roomId].music);
+            document.getElementById("ui-story-text").innerHTML = ""; 
+            updateUI(roomId);
+        }
+
+        function updateUI(roomId) {
+            const room = rooms[roomId];
+            
+            document.getElementById("ui-room-title").innerText = room.title;
+            document.getElementById("ui-story-text").innerHTML += room.renderText();
+            
+            const choicesDiv = document.getElementById("ui-choices");
+            choicesDiv.innerHTML = "";
+            room.renderChoices().forEach(choice => {
+                let btn = document.createElement("button");
+                btn.className = "choice-btn " + (choice.type === "action" ? "action-btn" : "");
+                btn.innerText = choice.text;
+                btn.onclick = () => { playClick(); choice.action(); };
+                choicesDiv.appendChild(btn);
+            });
+
+            const storyDiv = document.getElementById("ui-story-text");
+            storyDiv.scrollTop = storyDiv.scrollHeight;
+
+            document.getElementById("ui-room-img").innerText = room.emoji;
+            document.getElementById("ui-hp").innerText = "❤️".repeat(state.hp) + "🖤".repeat(state.maxHp - state.hp);
+            
+            const invList = document.getElementById("ui-inventory");
+            if (state.inventoryNames.length === 0) {
+                invList.innerHTML = `<li style="color: #888; font-style: italic;">Trống không...</li>`;
+            } else {
+                invList.innerHTML = state.inventoryNames.map(item => `<li>${item}</li>`).join("");
+            }
+
+            document.getElementById("ui-frag-count").innerText = state.fragments.length;
+            const fragList = document.getElementById("ui-fragments");
+            if (state.fragmentNames.length === 0) {
+                fragList.innerHTML = "";
+            } else {
+                fragList.innerHTML = state.fragmentNames.map(f => `<li style="font-size:12px;">${f}</li>`).join("");
+            }
+        }
+
+        function wrongAnswer(msg, fallBackRoomId = null) {
+            let autoHealed = false;
+            if (state.inventory.includes("RuouHoiPhuc")) {
+                removeItem("RuouHoiPhuc");
+                healToMax();
+                logMessage(`🍷 Rượu Hồi Phục tự động hồi đầy máu, hóa giải sát thương!`, "green");
+                autoHealed = true;
+            } else if (state.inventory.includes("ThuocMau")) {
+                removeItem("ThuocMau");
+                healHP(1);
+                logMessage(`🧪 Thuốc Hồi Máu tự động hồi 1 máu, hóa giải sát thương!`, "green");
+                autoHealed = true;
+            }
+
+            if (autoHealed) {
+                updateUI(state.currentRoom);
+                return;
+            }
+
+            state.hp -= 1;
+            
+            const panel = document.getElementById("main-panel");
+            panel.classList.add("damage-flash");
+            setTimeout(() => panel.classList.remove("damage-flash"), 500);
+
+            document.getElementById("ui-hp").innerText = "❤️".repeat(state.hp) + "🖤".repeat(state.maxHp - state.hp);
+
+            if (state.hp <= 0) {
+                logMessage(`❌ SAI RỒI! ${msg}`, "red");
+                const choicesDiv = document.getElementById("ui-choices");
+                choicesDiv.innerHTML = `<button class="choice-btn action-btn" onclick="resetGame()">Boo kiệt sức, trở về điểm bắt đầu... ➔</button>`;
+            } else {
+                logMessage(`❌ SAI RỒI! ${msg} (-1 HP)`, "red");
+                
+                if (fallBackRoomId) {
+                    const choicesDiv = document.getElementById("ui-choices");
+                    choicesDiv.innerHTML = `<button class="choice-btn action-btn" onclick="enterRoom(${fallBackRoomId})">Bị hất văng về màn trước ➔</button>`;
+                } else {
+                    updateUI(state.currentRoom);
+                }
+            }
+            
+            const storyDiv = document.getElementById("ui-story-text");
+            storyDiv.scrollTop = storyDiv.scrollHeight;
+        }
+
+        function logMessage(msg, color) {
+            document.getElementById("ui-story-text").innerHTML += `<p style="color:${color}; font-weight:bold;">${msg}</p>`;
+        }
+
+        function getItem(id, name) {
+            if (!state.inventory.includes(id)) {
+                state.inventory.push(id);
+                state.inventoryNames.push(name);
+            }
+        }
+
+        const TOTAL_FRAGMENTS = 17;
+        const FRAGMENT_MAP = {
+            10: {id:"ManhAnMo", name:"Mảnh Ấn Mộ 🪦"},
+            11: {id:"ManhAnTu", name:"Mảnh Ấn Tửu 🍷"},
+            12: {id:"ManhAnVien", name:"Mảnh Ấn Viên 🌿"},
+            13: {id:"ManhAnTuyen", name:"Mảnh Ấn Tuyền ⛲"},
+            14: {id:"ManhAnCanh", name:"Mảnh Ấn Canh 🗼"},
+            15: {id:"ManhAnGuong", name:"Mảnh Ấn Gương 🪞"},
+            16: {id:"ManhAnBua", name:"Mảnh Ấn Bùa 📜"},
+            17: {id:"ManhAnChuong", name:"Mảnh Ấn Chuông 🔔"},
+            18: {id:"ManhAnPhap", name:"Mảnh Ấn Pháp ✍️"},
+            19: {id:"ManhAnKy", name:"Mảnh Ấn Ký 📝"},
+            20: {id:"ManhAnNgu", name:"Mảnh Ấn Ngữ 🌺"},
+            21: {id:"ManhAnTho", name:"Mảnh Ấn Thơ 📖"},
+            22: {id:"ManhAnDo", name:"Mảnh Ấn Đồ 🗺️"},
+            23: {id:"ManhAnThoi", name:"Mảnh Ấn Thời 🕰️"},
+            24: {id:"ManhAnVuong", name:"Mảnh Ấn Vuông 🏟️"},
+            25: {id:"ManhAnTuDien", name:"Mảnh Ấn Từ 📝"},
+            26: {id:"ManhAnSo", name:"Mảnh Ấn Số 🔢"},
+        };
+
+        function collectFragment(roomId) {
+            if (!FRAGMENT_MAP[roomId]) return;
+            const f = FRAGMENT_MAP[roomId];
+            if (!state.fragments.includes(f.id)) {
+                state.fragments.push(f.id);
+                state.fragmentNames.push(f.name);
+                logMessage(`✨ Thu được ${f.name}! (${state.fragments.length}/${TOTAL_FRAGMENTS} Mảnh Ấn Triệu Hồi)`, "#c9a96e");
+            }
+        }
+
+        function removeItem(id) {
+            state.inventory = state.inventory.filter(i => i !== id);
+            const mapping = {
+                "KhoaBac": "Chìa Khóa Bạc 🗝️",
+                "ThuocMau": "Thuốc Hồi Máu 🧪",
+                "BomAnhSang": "Bom Ánh Sáng 💣",
+                "DenDau": "Đèn Dầu 🪔",
+                "RuouHoiPhuc": "Rượu Hồi Phục 🍷",
+                "BuaHoMenh": "Bùa Hộ Mệnh 🛡️",
+                "MatDaiBang": "Mắt Đại Bàng 🦅",
+                "NgocThoiGian": "Ngọc Thời Gian 💎",
+                "ButLongVu": "Bút Lông Vũ 🪶",
+                "ChuongNgan": "Chuông Ngân 🔔",
+                "SachCo": "Sách Cổ 📕",
+                "LaBanNguPhap": "La Bàn Ngữ Pháp 🧭",
+                "HatGiongTriThuc": "Hạt Giống Tri Thức 🌱",
+                "NgocTho": "Ngọc Thơ 💠",
+                "LaBanCo": "La Bàn Cổ 🧭",
+                "DongHoCat": "Đồng Hồ Cát ⏳",
+                "KhienRua": "Khiên Rùa 🐢",
+                "TuDienCo": "Quyển Từ Điển Cổ 📖",
+                "NhanThongThai": "Nhẫn Thông Thái 💍"
+            };
+            state.inventoryNames = state.inventory.map(i => mapping[i] || i);
+        }
+
+        function resetGame() {
+            state.hp = 3;
+            state.maxHp = 3;
+            state.inventory = [];
+            state.inventoryNames = [];
+            state.fragments = [];
+            state.fragmentNames = [];
+            state.bossPhase = 0;
+            state.currentRoom = 0;
+            state.visitedRooms = [];
+            state.q = {};
+            for (let key in state.flags) {
+                state.flags[key] = false;
+            }
+            enterRoom(0);
+        }
+
+        /* ================= BẢN ĐỒ ================= */
+        const mapData = {
+            positions: {
+                0:  [30, 94], 1:  [30, 80], 2:  [50, 62],
+                3:  [36, 48], 4:  [36, 34], 5:  [64, 48],
+                6:  [50, 20], 7:  [50, 8],  8:  [50, 2],
+                10: [66, 74], 11: [50, 78], 12: [20, 34],
+                13: [8,  34], 14: [82, 48], 15: [66, 20],
+                16: [82, 62], 17: [82, 36], 18: [36, 20],
+                19: [16, 62], 20: [8,  20], 21: [82, 18],
+                22: [66, 54], 23: [82, 54], 24: [36, 14],
+                25: [16, 78], 26: [82, 74]
+            },
+            connections: [
+                [0,1], [1,2], [2,3], [3,4], [4,6], [4,12], [4,24],
+                [2,5], [5,6], [5,14], [5,17],
+                [6,7], [6,15], [6,18], [7,8],
+                [2,10], [2,11], [2,16], [2,19], [2,22], [2,23], [2,26],
+                [12,13], [12,20], [15,21], [19,25]
+            ],
+            labels: {
+                0: "Trường", 1: "Ngục Tối", 2: "Hành Lang Hầm",
+                3: "Nhà Bếp", 4: "Sân Sau", 5: "Cầu Thang Đá",
+                6: "Thư Viện", 7: "Phòng Chế Thuật", 8: "Đỉnh Tháp",
+                10: "Hầm Mộ", 11: "Hầm Rượu", 12: "Khu Vườn Cổ",
+                13: "Đài Phun Nước", 14: "Tháp Canh", 15: "Phòng Gương",
+                16: "Phòng Bùa Chú", 17: "Tháp Chuông", 18: "Phòng Thư Pháp",
+                19: "Hành Lang KT", 20: "Vườn Ngữ Nghĩa", 21: "Điện Thơ Ca",
+                22: "Phòng Bản Đồ", 23: "Tháp Đồng Hồ", 24: "Sân Vuông",
+                25: "Thư Phòng NT", 26: "Mật Thất Số Học"
+            }
+        };
+
+        function openMap() {
+            const overlay = document.getElementById("map-overlay");
+            overlay.classList.add("open");
+            renderMap();
+        }
+
+        function closeMap(e) {
+            if (e && e.target !== document.getElementById("map-overlay")) return;
+            document.getElementById("map-overlay").classList.remove("open");
+        }
+
+        function renderMap() {
+            const area = document.getElementById("map-area");
+            const svg = document.getElementById("map-svg");
+            const w = area.clientWidth, h = area.clientHeight;
+
+            svg.innerHTML = "";
+            svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+
+            const visited = state.visitedRooms;
+            const current = state.currentRoom;
+
+            mapData.connections.forEach(([a, b]) => {
+                if (visited.includes(a) || visited.includes(b)) {
+                    const pA = mapData.positions[a], pB = mapData.positions[b];
+                    const dash = (!visited.includes(a) || !visited.includes(b)) ? "stroke-dasharray=\"4 3\"" : "";
+                    svg.innerHTML += `<line x1="${pA[0]}%" y1="${pA[1]}%"
+                        x2="${pB[0]}%" y2="${pB[1]}%"
+                        stroke="#8c7355" stroke-width="2" opacity="0.7" ${dash}/>`;
+                }
+            });
+
+            area.querySelectorAll(".map-node").forEach(el => el.remove());
+            area.querySelectorAll(".map-label").forEach(el => el.remove());
+
+            for (let id in mapData.positions) {
+                const numId = parseInt(id);
+                const pos = mapData.positions[id];
+                let cls = "map-node";
+                if (current === numId) cls += " current";
+                else if (visited.includes(numId)) cls += " visited";
+
+                const node = document.createElement("div");
+                node.className = cls;
+                node.style.left = pos[0] + "%";
+                node.style.top = pos[1] + "%";
+                node.textContent = visited.includes(numId) ? rooms[numId].emoji : "❓";
+                area.appendChild(node);
+
+                if (visited.includes(numId)) {
+                    const label = document.createElement("div");
+                    label.className = "map-label";
+                    label.style.left = pos[0] + "%";
+                    label.style.top = pos[1] + "%";
+                    label.textContent = mapData.labels[id];
+                    area.appendChild(label);
+                }
+            }
+        }
+
+        function healHP(amount) {
+            state.hp += amount;
+            if (state.hp > state.maxHp) state.hp = state.maxHp;
+        }
+
+        function healToMax() {
+            state.hp = state.maxHp;
+        }
+
+        function toggleMute() {
+            const btn = document.getElementById("mute-btn");
+            if (!masterGain) { initAudioCtx(); }
+            if (masterGain.gain.value > 0.01) {
+                masterGain.gain.value = 0;
+                btn.innerText = "🔇";
+                btn.classList.add("muted");
+            } else {
+                masterGain.gain.value = 0.30;
+                btn.innerText = "🔊";
+                btn.classList.remove("muted");
+            }
+        }
+
+        function saveGame() {
+            const saveData = {
+                hp: state.hp,
+                maxHp: state.maxHp,
+                inventory: state.inventory,
+                inventoryNames: state.inventoryNames,
+                fragments: state.fragments,
+                fragmentNames: state.fragmentNames,
+                bossPhase: state.bossPhase,
+                currentRoom: state.currentRoom,
+                visitedRooms: state.visitedRooms,
+                flags: state.flags
+            };
+            localStorage.setItem("boo_adventure_save", JSON.stringify(saveData));
+            logMessage("💾 Game đã được lưu!", "green");
+        }
+
+        function loadGame() {
+            const raw = localStorage.getItem("boo_adventure_save");
+            if (!raw) {
+                logMessage("📂 Không tìm thấy bản lưu nào!", "red");
+                return;
+            }
+            try {
+                const saveData = JSON.parse(raw);
+                state.hp = saveData.hp;
+                state.maxHp = saveData.maxHp;
+                state.inventory = saveData.inventory;
+                state.inventoryNames = saveData.inventoryNames;
+                state.fragments = saveData.fragments || [];
+                state.fragmentNames = saveData.fragmentNames || [];
+                state.bossPhase = saveData.bossPhase || 0;
+                state.currentRoom = saveData.currentRoom;
+                state.visitedRooms = saveData.visitedRooms || [];
+                state.flags = saveData.flags;
+                state.q = {};
+                document.getElementById("ui-story-text").innerHTML = "";
+                document.getElementById("ui-choices").innerHTML = "";
+                enterRoom(state.currentRoom);
+                logMessage("📂 Game đã được tải!", "green");
+            } catch (e) {
+                logMessage("📂 Lỗi khi tải bản lưu!", "red");
+            }
+        }
+
+        // Bắt đầu game
+        enterRoom(0);
+    </script>
+</body>
+</html>
