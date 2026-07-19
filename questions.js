@@ -73,7 +73,11 @@
    2. Nhờ Claude Code: "Đọc các file mới trong de-bai/, phân loại từng
       câu (gán topic + độ khó 1/2 theo tiêu chí đầu questions.js) và
       thêm vào đúng phần TOÁN / TIẾNG VIỆT của QUESTION_BANK".
-   3. Duyệt lại nội dung bằng mắt (bắt buộc với tài liệu dạy trẻ!) rồi commit.
+      CHỐNG TRÙNG: câu cùng dạng với câu đã có hoặc với generator toán
+      (chỉ khác số liệu) thì bỏ qua, không nạp.
+   3. Chạy `node tools/validate.js` - script tự bắt câu trùng dạng
+      (che số thành # rồi so khuôn) và lỗi schema; phải ✅ mới commit.
+   4. Duyệt lại nội dung bằng mắt (bắt buộc với tài liệu dạy trẻ!) rồi commit.
    ===================================================================== */
 
 /* ---------- Hàm tiện ích dùng chung ---------- */
