@@ -25,12 +25,41 @@ const vm = require("vm");
 const file = process.argv[2] || path.join(__dirname, "..", "questions.js");
 const ctx = vm.createContext({});
 vm.runInContext(fs.readFileSync(file, "utf8"), ctx, { filename: path.basename(file) });
-const BANK = vm.runInContext("QUESTION_BANK", ctx);
-const GENS = vm.runInContext("MATH_GENERATORS", ctx);
+const grab = name => vm.runInContext(`typeof ${name} !== "undefined" ? ${name} : null`, ctx);
+const BANK = grab("QUESTION_BANK");
+const GENS = grab("MATH_GENERATORS");
 const BOSS_GENS = vm.runInContext("[genBossPhase1, genBossPhase3, genBossPhase5]", ctx);
+const SPECS = grab("MATH_SPECS") || {};
+const TV_TEMPLATES = grab("TV_TEMPLATES") || {};
+const TV_MATERIALS = grab("TV_MATERIALS") || {};
 
 const errors = [];
 const warns = [];
+
+/* ---------- 0. Cấu trúc dạng/khuôn/ngữ liệu ---------- */
+// Mỗi dạng toán phải có spec (metadata) và ngược lại
+for (const topic in GENS) {
+    const s = SPECS[topic];
+    if (!s) errors.push(`Dạng toán "${topic}" chưa có MATH_SPECS (thiếu tên/ví dụ/note biến đổi)`);
+    else ["name", "example", "levels", "notes"].forEach(f => {
+        if (!s[f]) errors.push(`MATH_SPECS["${topic}"]: thiếu trường ${f}`);
+    });
+}
+for (const key in SPECS) {
+    if (!GENS[key] && !key.startsWith("boss-")) warns.push(`MATH_SPECS["${key}"] không có generator tương ứng (spec mồ côi)`);
+}
+["boss-1", "boss-3", "boss-5"].forEach(k => {
+    if (!SPECS[k]) warns.push(`Thiếu spec cho dạng toán của boss: ${k}`);
+});
+// Ngữ liệu tiếng Việt phải có khuôn, khuôn nên có ngữ liệu
+for (const topic in TV_MATERIALS) {
+    if (!TV_TEMPLATES[topic]) errors.push(`TV_MATERIALS["${topic}"] không có khuôn trong TV_TEMPLATES (ngữ liệu mồ côi, game không dùng được)`);
+}
+for (const topic in TV_TEMPLATES) {
+    if (!TV_MATERIALS[topic] || !TV_MATERIALS[topic].length) warns.push(`Khuôn "${topic}" chưa có ngữ liệu nào trong TV_MATERIALS`);
+    if (typeof TV_TEMPLATES[topic].build !== "function") errors.push(`TV_TEMPLATES["${topic}"]: thiếu hàm build(m)`);
+    if (!TV_TEMPLATES[topic].name) warns.push(`TV_TEMPLATES["${topic}"]: nên đặt trường name mô tả khuôn`);
+}
 
 const stripHtml = s => String(s).replace(/<[^>]*>/g, " ");
 /* Chuẩn hóa để so "cùng dạng khác số": bỏ HTML, thường hóa,

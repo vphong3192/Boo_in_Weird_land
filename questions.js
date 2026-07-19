@@ -1,48 +1,51 @@
 /* =====================================================================
-   questions.js - NGÂN HÀNG CÂU HỎI & GENERATOR TOÁN
+   questions.js - NGÂN HÀNG NỘI DUNG HỌC TẬP
    Game: Boo - Lạc Vào Thế Giới Phép Thuật (Toán & Tiếng Việt lớp 3)
 
    File này CHỈ chứa nội dung học tập, tách riêng khỏi engine game
-   (index.html). Muốn thêm/sửa bài tập chỉ cần sửa file này, không cần
-   đụng vào engine.
+   (index.html). Muốn thêm/sửa bài tập chỉ cần sửa file này.
 
    ---------------------------------------------------------------------
-   1. ĐỘ KHÓ VÀ CHẾ ĐỘ CHƠI
-   Mỗi câu hỏi có nhãn difficulty:
-   - 1 = CƠ BẢN   : bám sát chuẩn kiến thức lớp 3
-   - 2 = NÂNG CAO : toán tư duy / bồi dưỡng học sinh giỏi
-   Đầu game bé chọn chế độ:
-   - 🌱 Cơ Bản   : chỉ nạp câu difficulty 1, generator toán chạy mức dễ
-                   (số nhỏ, bài toán ít bước)
-   - 🔥 Thử Thách: nạp toàn bộ câu hỏi, generator toán chạy mức khó
+   1. KIẾN TRÚC NGÂN HÀNG: DẠNG BÀI, KHÔNG PHẢI CÂU RỜI
+
+   TOÁN = DẠNG BÀI (generate vô hạn biến thể số):
+   - MATH_SPECS      : metadata từng dạng - tên, ví dụ gốc, phạm vi số
+                       theo độ khó, note cách biến đổi đề & đáp án nhiễu
+   - MATH_GENERATORS : hàm sinh đề của từng dạng (nhận diff 1/2)
+   Nạp đề toán mới:
+   a. Tra MATH_SPECS xem dạng đã có chưa. ĐÃ CÓ (đề mới chỉ khác số
+      liệu/lời văn) -> BỎ QUA, nhiều nhất là bổ sung ghi chú vào spec.
+   b. Dạng CHƯA CÓ -> viết generator mới (đủ 2 mức độ khó, đáp án nhiễu
+      mô phỏng lỗi sai điển hình) + thêm spec với ví dụ gốc làm mẫu.
+   c. Câu đặc biệt không tổng quát hóa được -> cho vào STATIC_QUESTIONS.
+
+   TIẾNG VIỆT = KHUÔN + NGỮ LIỆU (không generate được bằng random số,
+   cần ngữ liệu thật đã kiểm chứng):
+   - TV_TEMPLATES : khuôn câu hỏi của từng topic, viết đúng 1 lần
+   - TV_MATERIALS : ngữ liệu (câu văn, thành ngữ, cặp chính tả...)
+   Nạp đề tiếng Việt mới:
+   a. Kiểu bài khớp khuôn có sẵn -> chỉ thêm dòng ngữ liệu vào
+      TV_MATERIALS (nhớ id duy nhất + difficulty).
+   b. Kiểu bài mới -> thêm khuôn vào TV_TEMPLATES + ngữ liệu, rồi khai
+      báo phòng sử dụng topic đó trong ROOM_PUZZLES (index.html).
+
+   QUESTION_BANK được BIÊN DỊCH TỰ ĐỘNG từ khuôn + ngữ liệu +
+   STATIC_QUESTIONS ở cuối phần dữ liệu - KHÔNG sửa tay vào đó.
+
+   Sau mỗi lần nạp: chạy `node tools/validate.js` (bắt câu trùng dạng,
+   dạng thiếu spec, ngữ liệu mồ côi...), phải ✅ mới commit.
 
    ---------------------------------------------------------------------
-   2. CÁCH THÊM CÂU HỎI TRẮC NGHIỆM MỚI
-   QUESTION_BANK chia làm 2 phần độc lập: PHẦN I - TOÁN và
-   PHẦN II - TIẾNG VIỆT. Thêm câu vào đúng phần theo mẫu:
-
-   {
-     id: "tv-036",              // mã duy nhất ("toan-###" hoặc "tv-###")
-     subject: "tieng-viet",     // "toan" hoặc "tieng-viet"
-     topic: "kieu-cau",         // chủ đề - phòng nào dùng topic nào xem bảng dưới
-     difficulty: 1,             // 1 = cơ bản, 2 = nâng cao
-     question: "Nội dung câu hỏi (được dùng thẻ HTML như <strong>, <br>)",
-     choices: ["Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D"],
-     correctIndex: 0,           // vị trí đáp án đúng trong choices (đếm từ 0)
-     wrongHints: ["", "Gợi ý khi chọn nhầm B", "Gợi ý khi chọn nhầm C", "..."],
-                                // cùng độ dài với choices; vị trí đáp án đúng để ""
-     explain: "Lời giải thích hiện ra khi trả lời đúng."
-   }
-
-   Mỗi lần vào phòng, game chọn NGẪU NHIÊN 1 câu trong topic của phòng
-   (đã lọc theo chế độ chơi). Topic toán có cả câu tĩnh lẫn generator
-   thì hai nguồn được trộn ngẫu nhiên 50/50 - cứ thêm câu toán tĩnh
-   vào PHẦN I là game tự dùng.
+   2. ĐỘ KHÓ VÀ CHẾ ĐỘ CHƠI
+   - difficulty 1 = CƠ BẢN   : bám sát chuẩn kiến thức lớp 3
+   - difficulty 2 = NÂNG CAO : toán tư duy / bồi dưỡng HSG
+   Chế độ 🌱 Cơ Bản chỉ nạp ngữ liệu difficulty 1 và generator chạy
+   mức dễ; chế độ 🔥 Thử Thách nạp tất cả và generator chạy mức khó.
 
    ---------------------------------------------------------------------
    3. TOPIC ĐANG ĐƯỢC CÁC PHÒNG SỬ DỤNG
 
-   Tiếng Việt (câu tĩnh trong QUESTION_BANK):
+   Tiếng Việt (khuôn + ngữ liệu):
    - Phòng 4  (Sân Sau)           : tu-chi-dac-diem-cau
    - Phòng 6  (Thư Viện)          : chinh-ta-s-x
    - Phòng 16 (Phòng Bùa Chú)     : chinh-ta-r-d-gi
@@ -53,8 +56,7 @@
    - Phòng 21 (Điện Thơ Ca)       : so-sanh
    - Phòng 25 (Thư Phòng Ngôn Từ) : kieu-cau              (Boss phase 4 cũng dùng)
 
-   Toán (đề sinh ngẫu nhiên bằng hàm, xem MATH_GENERATORS cuối file;
-   câu toán tĩnh cùng topic sẽ được trộn chung):
+   Toán (dạng bài, sinh đề ngẫu nhiên):
    - Phòng 1: thu-tu-phep-tinh      - Phòng 3: nhan-roi-tru
    - Phòng 5: bang-nhan             - Phòng 7: chieu-rong-hcn
    - Phòng 10: phep-toan-la-1       - Phòng 11: tong-hieu
@@ -65,338 +67,422 @@
 
    ---------------------------------------------------------------------
    4. NẠP ĐỀ TỪ FILE PDF/DOCX (thư mục de-bai/)
-   Kho đề thô chia làm 2 mục độc lập:
-   - de-bai/toan/        : đề toán
-   - de-bai/tieng-viet/  : đề tiếng Việt
-   Quy trình (chi tiết xem de-bai/README.md):
-   1. Bỏ file PDF/docx vào đúng mục.
-   2. Nhờ Claude Code: "Đọc các file mới trong de-bai/, phân loại từng
-      câu (gán topic + độ khó 1/2 theo tiêu chí đầu questions.js) và
-      thêm vào đúng phần TOÁN / TIẾNG VIỆT của QUESTION_BANK".
-      CHỐNG TRÙNG: câu cùng dạng với câu đã có hoặc với generator toán
-      (chỉ khác số liệu) thì bỏ qua, không nạp.
-   3. Chạy `node tools/validate.js` - script tự bắt câu trùng dạng
-      (che số thành # rồi so khuôn) và lỗi schema; phải ✅ mới commit.
-   4. Duyệt lại nội dung bằng mắt (bắt buộc với tài liệu dạy trẻ!) rồi commit.
+   Kho đề thô chia 2 mục: de-bai/toan/ và de-bai/tieng-viet/.
+   Quy trình chi tiết + quy tắc chống trùng: xem de-bai/README.md.
+   Tóm tắt: toán quy về DẠNG (dạng có rồi -> bỏ qua), tiếng Việt bổ
+   sung NGỮ LIỆU; xong chạy node tools/validate.js rồi duyệt bằng mắt.
    ===================================================================== */
 
 /* ---------- Hàm tiện ích dùng chung ---------- */
 function rInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 function shuffle(arr) { let a = [...arr]; for (let i = a.length-1;i>0;i--) { let j = rInt(0,i); [a[i],a[j]] = [a[j],a[i]]; } return a; }
 
-const QUESTION_BANK = [
+/* =====================================================================
+   PHẦN A: METADATA CÁC DẠNG TOÁN (MATH_SPECS)
+   Mỗi dạng trong MATH_GENERATORS có đúng 1 spec ở đây. Khi nạp đề toán
+   mới, tra bảng này trước: đề trùng dạng (chỉ khác số) -> bỏ qua.
+   - name    : tên dạng, dễ đối chiếu với đề thô
+   - example : ví dụ gốc kèm đáp án (giữ làm mẫu chuẩn của dạng)
+   - levels  : phạm vi số liệu theo độ khó (1 = Cơ Bản, 2 = Thử Thách)
+   - notes   : cách biến đổi đề + thiết kế đáp án nhiễu (mô phỏng lỗi
+               sai điển hình của học sinh)
+   - source  : nguồn đề đã quy về dạng này (nối thêm khi nạp đề trùng dạng)
+   ===================================================================== */
+const MATH_SPECS = {
+    "thu-tu-phep-tinh": {
+        name: "Thứ tự thực hiện phép tính: a + b × c",
+        example: "15 + 3 × 4 = ? → 27 (nhân trước: 3×4=12, rồi cộng: 15+12=27)",
+        levels: { 1: "a 10-30; b, c 2-5", 2: "a 15-50; b 2-9; c 3-9" },
+        notes: "Nhiễu: lệch thừa số ±1 để bắt lỗi tính nhân ẩu. Có thể mở rộng thành a - b × c hoặc a + b : c nếu gặp đề dạng đó (khi ấy tạo dạng mới).",
+        source: "Đề gốc của game"
+    },
+    "nhan-roi-tru": {
+        name: "Bài toán hai bước: cần x nhóm × y đơn vị, đã có z, hỏi thiếu bao nhiêu",
+        example: "Cần 8 nồi súp, mỗi nồi 10 con nhện, đã có 51 con → 8×10-51 = 29 con",
+        levels: { 1: "3-5 nhóm × 4-9 đơn vị", 2: "3-8 nhóm × 8-15 đơn vị" },
+        notes: "Nhiễu: quên trừ số đã có (ra tổng), trừ nhầm từ (x-1) nhóm, cộng ngược thêm y. Biến đổi: đổi bối cảnh (nồi súp/khay bánh/hộp bút) không tạo dạng mới.",
+        source: "Đề gốc của game"
+    },
+    "bang-nhan": {
+        name: "Dãy số cách đều theo bảng nhân, tìm số còn thiếu",
+        example: "3, 6, __, 12, 15 → 9 (bảng nhân 3)",
+        levels: { 1: "bảng nhân 2-5", 2: "bảng nhân 3-9" },
+        notes: "Nhiễu: các số cùng bảng nhân nhưng sai vị trí. Biến đổi: đổi vị trí ô trống, đổi bảng nhân.",
+        source: "Đề gốc của game"
+    },
+    "chieu-rong-hcn": {
+        name: "Biết chu vi và chiều dài hình chữ nhật, tìm chiều rộng",
+        example: "Chu vi 40m, dài 12m → 40:2-12 = 8m",
+        levels: { 1: "nửa chu vi 8-15", 2: "nửa chu vi 10-30" },
+        notes: "Nhiễu: quên chia đôi chu vi, dừng ở nửa chu vi, trả lời bằng chiều dài. Dạng ngược (biết rộng tìm dài) vẫn là dạng này.",
+        source: "Đề gốc của game"
+    },
+    "phep-toan-la-1": {
+        name: "Phép toán tự định nghĩa (một bước): a △ b = biểu thức của a, b",
+        example: "a △ b = b×a+a+b; 5 △ 3 = 15+5+3 = 23",
+        levels: { 1: "công thức 2 số hạng (a×b+a), số 2-9", 2: "công thức 3 số hạng (b×a+a+b), số 3-20" },
+        notes: "Nhiễu: bỏ sót một số hạng của công thức. Mọi đề 'phép toán lạ' một bước đều quy về dạng này, chỉ khác công thức.",
+        source: "Đề gốc của game"
+    },
+    "tong-hieu": {
+        name: "Quan hệ hơn-kém (dễ) / tìm hai số biết tổng và hiệu (khó)",
+        example: "Khó: tổng 2 thùng 500 lít, A hơn B 100 lít → A = (500+100):2 = 300",
+        levels: { 1: "biết A và phần 'ít hơn', tìm B bằng phép trừ", 2: "tổng-hiệu chuẩn, số đến 3000" },
+        notes: "Nhiễu: trả lời bằng tổng/hiệu/số kia. Đề hỏi số bé thay vì số lớn vẫn là dạng này.",
+        source: "Đề gốc của game"
+    },
+    "tong-ti": {
+        name: "Gấp một số lên nhiều lần (dễ) / tìm hai số biết tổng và tỉ (khó)",
+        example: "Khó: tổng 36 bông, hồng gấp 3 lần cúc → cúc = 36:(3+1) = 9",
+        levels: { 1: "biết B và tỉ lệ, tìm A = B × r", 2: "tổng-tỉ chuẩn, chia phần" },
+        notes: "Nhiễu: nhầm 'gấp' thành cộng, trả lời nhầm số được hỏi, chia thiếu (tỉ+1) phần.",
+        source: "Đề gốc của game"
+    },
+    "chuyen-gap-ba": {
+        name: "So sánh lượng hai bể (dễ) / chuyển x đơn vị để bên này gấp k lần bên kia (khó)",
+        example: "Khó: Jacky 40 lít, Emma 80 lít, chuyển x để Emma gấp 3 Jacky → (80+x)=3(40-x) → x=10",
+        levels: { 1: "tìm phần chênh lệch giữa hai bể (phép trừ)", 2: "phương trình chuyển - toán tư duy" },
+        notes: "Mức khó vượt chuẩn lớp 3, chỉ xuất hiện ở chế độ Thử Thách. Nhiễu mức khó: các số hạng trung gian của phép giải.",
+        source: "Đề gốc của game"
+    },
+    "tong-ti-hieu": {
+        name: "Biết B và tỉ lệ, tính hiệu (dễ) / biết tổng và tỉ, tính hiệu (khó)",
+        example: "Khó: tổng 300, A gấp 2 lần B → B=100, A=200, A-B=100",
+        levels: { 1: "B cho sẵn, A = k×B, tính A-B", 2: "phải tìm B từ tổng trước" },
+        notes: "Là dạng tổng-tỉ nhưng câu hỏi chốt là HIỆU - nhiễu chính là đáp án của A, B, tổng để bắt lỗi đọc đề thiếu.",
+        source: "Đề gốc của game"
+    },
+    "phep-toan-la-2": {
+        name: "Phép toán tự định nghĩa lồng nhau: a ◇ (b ◇ c)",
+        example: "a◇b = a×b-a-b+1; 4◇(3◇5) = 4◇8 = 21",
+        levels: { 1: "một bước, không lồng, số 3-7", 2: "lồng hai bước, số 3-10" },
+        notes: "Nhiễu: quên bước trong ngoặc, sai dấu công thức, bỏ '+1'. Khác phep-toan-la-1 ở tính lồng nhau.",
+        source: "Đề gốc của game"
+    },
+    "dien-tich-hcn": {
+        name: "Diện tích hình chữ nhật = dài × rộng",
+        example: "Dài 12m, rộng 5m → 60 m²",
+        levels: { 1: "dài 3-9, rộng 2-6", 2: "dài 7-16, rộng 4-11" },
+        notes: "Nhiễu chủ lực: chu vi (kèm đơn vị m để bé học phân biệt m/m²), tổng dài+rộng.",
+        source: "Đề gốc của game"
+    },
+    "xem-gio": {
+        name: "Cộng khoảng thời gian vào giờ bắt đầu",
+        example: "8 giờ 30 phút + 20 phút = 8 giờ 50 phút",
+        levels: { 1: "phút bắt đầu = 30, cộng 10-20 phút, không tràn giờ", 2: "phút 15/30/45, cộng 15-45 phút, có thể tràn sang giờ mới" },
+        notes: "Nhiễu: giữ nguyên giờ bắt đầu, lệch 1 giờ, giờ ngẫu nhiên. Biến đổi: đề trừ thời gian (hỏi giờ bắt đầu) sẽ là dạng mới.",
+        source: "Đề gốc của game"
+    },
+    "chu-vi-hinh-vuong": {
+        name: "Chu vi hình vuông = cạnh × 4",
+        example: "Cạnh 6m → chu vi 24m",
+        levels: { 1: "cạnh 3-9", 2: "cạnh 5-15" },
+        notes: "Nhiễu chủ lực: diện tích cạnh×cạnh (kèm m²), cạnh+4, cạnh×2.",
+        source: "Đề gốc của game"
+    },
+    "tim-so-bi-chia": {
+        name: "Tìm số bị chia = số chia × thương + số dư",
+        example: "Số chia 6, thương 9, dư 4 → 6×9+4 = 58",
+        levels: { 1: "số chia 2-5, thương 3-9", 2: "số chia 3-8, thương 4-12" },
+        notes: "Nhiễu: quên cộng dư, trừ dư, lệch một thương. Luôn giữ ràng buộc dư < số chia.",
+        source: "Đề gốc của game"
+    },
+    /* Dạng riêng của trận boss (không gắn phòng thường) */
+    "boss-1": {
+        name: "Tổng hai tích: a × b + c × d",
+        example: "5×3 + 4×2 = 23",
+        levels: { 1: "thừa số 2-9", 2: "thừa số đến 20" },
+        notes: "Nhiễu: lệch một thừa số ±1.",
+        source: "Đề gốc của game"
+    },
+    "boss-3": {
+        name: "Tìm hai số rồi lấy tích (dễ: biết tổng và 1 số; khó: biết tổng và hiệu)",
+        example: "Khó: tổng 50, hiệu 10 → 30×20 = 600",
+        levels: { 1: "tổng và một số cho sẵn, số 2-10", 2: "tổng-hiệu, số 10-60" },
+        notes: "Nhiễu: trả lời bằng tổng, nhân sai một thừa số.",
+        source: "Đề gốc của game"
+    },
+    "boss-5": {
+        name: "Suy luận ngược tìm số bí ẩn qua chuỗi phép tính",
+        example: "Khó: x×3+9 chia 2 trừ 4 được 8 → tính ngược x=5",
+        levels: { 1: "2 bước (nhân rồi trừ)", 2: "4 bước (nhân, cộng, chia, trừ)" },
+        notes: "Nhiễu: các giá trị trung gian của chuỗi tính ngược. Luôn ràng buộc chia hết ở bước chia.",
+        source: "Đề gốc của game"
+    }
+};
 
 /* =====================================================================
-   PHẦN I: TOÁN (câu tĩnh trích từ đề)
-   Chưa có câu nào - toán hiện dùng generator sinh đề ngẫu nhiên.
-   Câu toán trích từ file PDF/docx trong de-bai/toan/ sẽ thêm vào đây
-   (id "toan-001", "toan-002"...; topic trùng với generator thì hai
-   nguồn tự trộn 50/50, topic mới thì khai báo phòng dùng trong
-   ROOM_PUZZLES ở index.html).
+   PHẦN B: KHUÔN CÂU HỎI TIẾNG VIỆT (TV_TEMPLATES)
+   Mỗi topic một khuôn, viết đúng 1 lần. build(m) nhận một dòng ngữ
+   liệu từ TV_MATERIALS và trả về câu hỏi hoàn chỉnh
+   {question, choices, correctIndex, wrongHints, explain}.
    ===================================================================== */
+const TV_TEMPLATES = {
+    "tu-chi-dac-diem-cau": {
+        name: "Tìm từ chỉ đặc điểm trong một câu văn",
+        build: m => ({
+            question: `Trong câu: '${m.sentence}', từ nào là từ chỉ <strong>ĐẶC ĐIỂM</strong>?`,
+            choices: m.options,
+            correctIndex: m.correctIndex,
+            wrongHints: m.hints,
+            explain: `'${m.options[m.correctIndex]}' là từ chỉ đặc điểm - ${m.why}.`
+        })
+    },
+    "chinh-ta-s-x": {
+        name: "Chọn cách viết đúng chính tả s/x",
+        build: m => ({
+            question: "Điền 's' hay 'x' - cách viết nào dưới đây <strong>ĐÚNG</strong> chính tả?",
+            choices: [m.correct, m.wrong],
+            correctIndex: 0,
+            wrongHints: ["", `Sai! Viết đúng phải là: '${m.correct}'.`],
+            explain: `Viết đúng chính tả là: '${m.correct}'.`
+        })
+    },
+    "chinh-ta-r-d-gi": {
+        name: "Tìm cụm từ viết đúng chính tả r/d/gi/l",
+        build: m => ({
+            question: "Trong bốn cụm từ dưới đây, cụm từ nào viết <strong>ĐÚNG</strong> chính tả?",
+            choices: m.options,
+            correctIndex: m.correctIndex,
+            wrongHints: m.corrections.map(c => c ? `Sai! Viết đúng là '${c}'.` : ""),
+            explain: `'${m.options[m.correctIndex]}' là cụm từ duy nhất viết đúng chính tả.`
+        })
+    },
+    "thanh-ngu-que-huong": {
+        name: "Tìm thành ngữ KHÔNG thuộc chủ đề quê hương",
+        build: m => ({
+            question: "Thành ngữ nào dưới đây <strong>KHÔNG</strong> nói về quê hương, đất nước?",
+            choices: m.idioms,
+            correctIndex: m.notIdx,
+            wrongHints: m.idioms.map((_, i) => i === m.notIdx ? "" : "Đây LÀ thành ngữ về quê hương."),
+            explain: `'${m.idioms[m.notIdx]}' nói về ${m.aboutWhat}, KHÔNG phải thành ngữ về quê hương.`
+        })
+    },
+    "ca-dao-tuc-ngu": {
+        name: "Điền từ còn thiếu vào câu ca dao, tục ngữ",
+        build: m => ({
+            question: `Điền từ còn thiếu vào câu: "${m.line}"`,
+            choices: [m.answer, ...m.wrongs],
+            correctIndex: 0,
+            wrongHints: ["", ...m.wrongs.map(() => "Sai! Đây không phải câu gốc.")],
+            explain: `Câu đúng: "${m.fullLine}"`
+        })
+    },
+    "dau-cau": {
+        name: "Tìm dấu chấm đặt sai vị trí trong đoạn văn",
+        build: m => ({
+            question: `"${m.passage}"<br>Hỏi dấu chấm số mấy bị đặt <strong>SAI</strong> vị trí?`,
+            choices: ["Dấu chấm (1)", "Dấu chấm (2)", "Dấu chấm (3)", "Dấu chấm (4)"],
+            correctIndex: m.wrongDot - 1,
+            wrongHints: [1, 2, 3, 4].map(n => n === m.wrongDot ? "" : `Sai! Dấu chấm (${n}) đặt đúng vị trí.`),
+            explain: m.explain
+        })
+    },
+    "tu-chi-dac-diem-doan": {
+        name: "Tìm từ chỉ đặc điểm trong đoạn văn",
+        build: m => ({
+            question: `Đoạn văn: "${m.passage}"<br>Trong các từ sau, từ nào là từ chỉ <strong>ĐẶC ĐIỂM</strong>?`,
+            choices: m.options,
+            correctIndex: m.correctIndex,
+            wrongHints: m.options.map((opt, i) => i === m.correctIndex ? "" : `Sai! '${opt}' là từ chỉ sự vật.`),
+            explain: `'${m.options[m.correctIndex]}' là từ chỉ đặc điểm (tính từ).`
+        })
+    },
+    "so-sanh": {
+        name: "Tìm cặp sự vật được so sánh trong câu thơ",
+        build: m => ({
+            question: `"${m.poem}"<br>Trong hai câu thơ trên, sự vật nào được <strong>so sánh</strong> với sự vật nào?`,
+            choices: m.options,
+            correctIndex: m.correctIndex,
+            wrongHints: m.hints,
+            explain: `Hình ảnh so sánh: ${m.options[m.correctIndex]} (có từ so sánh 'như').`
+        })
+    },
+    "kieu-cau": {
+        name: "Phân biệt kiểu câu: kể / hỏi / cảm / khiến",
+        build: m => ({
+            question: `Câu: <em>"${m.sentence}"</em><br>Đây là <strong>kiểu câu gì</strong>?`,
+            choices: ["Câu cảm", "Câu kể", "Câu hỏi", "Câu khiến"],
+            correctIndex: m.correctIndex,
+            wrongHints: m.hints,
+            explain: `'${m.sentence}' là ${["câu cảm", "câu kể", "câu hỏi", "câu khiến"][m.correctIndex]} (${m.why}).`
+        })
+    }
+};
 
 /* =====================================================================
-   PHẦN II: TIẾNG VIỆT
+   PHẦN C: NGỮ LIỆU TIẾNG VIỆT (TV_MATERIALS)
+   Nạp đề tiếng Việt = thêm dòng vào đây (id duy nhất, difficulty 1/2).
+   Trường của mỗi dòng phải khớp với khuôn cùng topic ở PHẦN B.
    ===================================================================== */
+const TV_MATERIALS = {
+    "tu-chi-dac-diem-cau": [
+        { id: "tv-001", difficulty: 1,
+          sentence: "Những đám mây xám xịt đang bay lơ lửng trên bầu trời",
+          options: ["Đám mây", "Xám xịt", "Lơ lửng"], correctIndex: 1,
+          hints: ["Đó là từ chỉ sự vật.", "", "Đó là từ chỉ hoạt động/trạng thái."],
+          why: "miêu tả màu sắc của đám mây" },
+        { id: "tv-002", difficulty: 1,
+          sentence: "Chú chó mực đen tuyền chạy nhanh thoăn thoắt trên sân",
+          options: ["Chú chó", "Đen tuyền", "Thoăn thoắt"], correctIndex: 1,
+          hints: ["Đó là từ chỉ sự vật.", "", "Đó là từ chỉ hoạt động."],
+          why: "miêu tả màu lông của chú chó" },
+        { id: "tv-003", difficulty: 1,
+          sentence: "Chiếc lá vàng úa rơi nhẹ nhàng xuống mặt đất",
+          options: ["Chiếc lá", "Vàng úa", "Nhẹ nhàng"], correctIndex: 1,
+          hints: ["Đó là từ chỉ sự vật.", "", "Đó là từ chỉ cách thức của hành động rơi."],
+          why: "miêu tả màu sắc của chiếc lá" },
+        { id: "tv-004", difficulty: 1,
+          sentence: "Dòng suối trong vắt chảy róc rách qua khe đá",
+          options: ["Dòng suối", "Trong vắt", "Róc rách"], correctIndex: 1,
+          hints: ["Đó là từ chỉ sự vật.", "", "Đó là từ chỉ âm thanh."],
+          why: "miêu tả độ trong của dòng suối" },
+        { id: "tv-005", difficulty: 1,
+          sentence: "Bầu trời cao vời vợi điểm vài áng mây trắng muốt",
+          options: ["Bầu trời", "Vời vợi", "Áng mây"], correctIndex: 1,
+          hints: ["Đó là từ chỉ sự vật.", "", "Đó là từ chỉ sự vật."],
+          why: "miêu tả độ cao của bầu trời" },
+    ],
+    "chinh-ta-s-x": [
+        { id: "tv-006", difficulty: 1, correct: "sâu chuỗi, xuất hiện", wrong: "xâu chuỗi, suất hiện" },
+        { id: "tv-007", difficulty: 1, correct: "sản xuất, xôn xao", wrong: "xản xuất, sôn sao" },
+        { id: "tv-008", difficulty: 1, correct: "sung sướng, xinh xắn", wrong: "xung xướng, sinh sắn" },
+        { id: "tv-009", difficulty: 1, correct: "sáng suốt, xán lạn", wrong: "xáng xuốt, sán lạn" },
+    ],
+    "chinh-ta-r-d-gi": [
+        { id: "tv-010", difficulty: 1,
+          options: ["Suối chảy dóc dách", "Nụ cười rạng rỡ", "Sức khỏe rẻo rai", "Tiếng cười ròn rã"],
+          correctIndex: 1, corrections: ["róc rách", "", "dẻo dai", "giòn giã"] },
+        { id: "tv-011", difficulty: 1,
+          options: ["Hạt sương dung dinh", "Ánh nắng rực rỡ", "Ngày nghỉ rảnh dỗi", "Giọng nói rịu ràng"],
+          correctIndex: 1, corrections: ["rung rinh", "", "rảnh rỗi", "dịu dàng"] },
+        { id: "tv-012", difficulty: 1,
+          options: ["Ánh đèn nung ninh", "Mặt trời dạng đông", "Hạt gạo dẻo thơm", "Em bé rễ thương"],
+          correctIndex: 2, corrections: ["lung linh", "rạng đông", "", "dễ thương"] },
+    ],
+    "thanh-ngu-que-huong": [
+        { id: "tv-013", difficulty: 1,
+          idioms: ["Non xanh nước biếc", "Thức khuya dậy sớm", "Chôn rau cắt rốn", "Quê cha đất tổ"],
+          notIdx: 1, aboutWhat: "sự chăm chỉ" },
+        { id: "tv-014", difficulty: 1,
+          idioms: ["Non sông gấm vóc", "Dám nghĩ dám làm", "Chôn rau cắt rốn", "Thẳng cánh cò bay"],
+          notIdx: 1, aboutWhat: "đức tính mạnh dạn" },
+        { id: "tv-015", difficulty: 1,
+          idioms: ["Quê cha đất tổ", "Học một biết mười", "Non xanh nước biếc", "Chôn rau cắt rốn"],
+          notIdx: 1, aboutWhat: "sự thông minh" },
+    ],
+    "ca-dao-tuc-ngu": [
+        { id: "tv-016", difficulty: 1,
+          line: "Công cha như ___, nghĩa mẹ như nước trong nguồn chảy ra.",
+          answer: "núi Thái Sơn", wrongs: ["núi cao biển rộng", "cây đại thụ", "biển Đông"],
+          fullLine: "Công cha như núi Thái Sơn, nghĩa mẹ như nước trong nguồn chảy ra." },
+        { id: "tv-017", difficulty: 1,
+          line: "Anh em như thể ___, rách lành đùm bọc dở hay đỡ đần.",
+          answer: "tay chân", wrongs: ["chân tay", "cá tôm", "ruột rà"],
+          fullLine: "Anh em như thể tay chân, rách lành đùm bọc dở hay đỡ đần." },
+        { id: "tv-018", difficulty: 1,
+          line: "Nhiễu điều phủ lấy ___, người trong một nước phải thương nhau cùng.",
+          answer: "giá gương", wrongs: ["tấm gương", "gương soi", "bức tranh"],
+          fullLine: "Nhiễu điều phủ lấy giá gương, người trong một nước phải thương nhau cùng." },
+    ],
+    "dau-cau": [
+        { id: "tv-019", difficulty: 1,
+          passage: "Trong lâu đài, mỗi kẻ một việc(1). Lính canh gác cổng(2). Tuần tra tháp canh. Phù thủy già lẩm nhẩm thần chú(3). Triệu hồi bóng ma. Lũ yêu tinh nhóm lò, luyện phép thuật(4).",
+          wrongDot: 2,
+          explain: "Dấu chấm (2) cắt sai câu: 'Lính canh gác cổng, tuần tra tháp canh' phải là một câu." },
+        { id: "tv-020", difficulty: 1,
+          passage: "Trong lâu đài, mỗi kẻ một việc(1). Bọn yêu tinh nhỏ gom củi khô(2). Nhóm lò lửa lớn. Phù thủy già đọc thần chú(3). Gọi gió triệu sét. Lũ quạ bay rợp trời đen kịt(4).",
+          wrongDot: 2,
+          explain: "Dấu chấm (2) cắt sai câu: 'Bọn yêu tinh nhỏ gom củi khô, nhóm lò lửa lớn' phải là một câu." },
+        { id: "tv-021", difficulty: 1,
+          passage: "Trong lâu đài, mỗi kẻ một việc(1). Phù thủy già nghiền ngẫm sách cổ(2). Tìm kiếm phép thuật. Lũ dơi treo mình trên xà nhà(3). Rỉ rả kêu suốt đêm(4).",
+          wrongDot: 2,
+          explain: "Dấu chấm (2) cắt sai câu: 'Phù thủy già nghiền ngẫm sách cổ, tìm kiếm phép thuật' phải là một câu." },
+    ],
+    "tu-chi-dac-diem-doan": [
+        { id: "tv-022", difficulty: 1,
+          passage: "Màn đêm đen kịt bao trùm lâu đài, những ngọn nến le lói chập chờn trong gió, những bức tường rêu phong cổ kính đứng im lìm giữa màn sương.",
+          options: ["Màn đêm", "Ngọn nến", "Đen kịt", "Bức tường"], correctIndex: 2 },
+        { id: "tv-023", difficulty: 1,
+          passage: "Lão phù thủy già nua chậm chạp bước qua hành lang tối tăm, chiếc áo choàng rách nát kéo lê trên sàn đá lạnh lẽo.",
+          options: ["Lão phù thủy", "Chậm chạp", "Áo choàng", "Sàn đá"], correctIndex: 1 },
+        { id: "tv-024", difficulty: 1,
+          passage: "Ngọn lửa xanh lét bùng lên từ vạc dầu, tỏa ra thứ ánh sáng ma quái rùng rợn khắp căn phòng.",
+          options: ["Ngọn lửa", "Vạc dầu", "Xanh lét", "Căn phòng"], correctIndex: 2 },
+    ],
+    "so-sanh": [
+        { id: "tv-025", difficulty: 1,
+          poem: "Ngọn tháp vươn như lưỡi kiếm<br>Đâm thủng màn đêm u tối.",
+          options: ["Ngọn tháp ⇔ lưỡi kiếm", "Ngọn tháp ⇔ màn đêm", "Lưỡi kiếm ⇔ màn đêm"],
+          correctIndex: 0,
+          hints: ["", "Sai! Ngọn tháp ĐÂM THỦNG màn đêm, đó không phải so sánh.", "Sai! Không có so sánh nào giữa lưỡi kiếm và màn đêm."] },
+        { id: "tv-026", difficulty: 1,
+          poem: "Mặt trăng treo như chiếc đèn lồng<br>Soi sáng con đường về.",
+          options: ["Mặt trăng ⇔ đèn lồng", "Mặt trăng ⇔ con đường", "Đèn lồng ⇔ con đường"],
+          correctIndex: 0,
+          hints: ["", "Sai! Mặt trăng SOI SÁNG con đường, đó không phải so sánh.", "Sai! Không có so sánh nào giữa đèn lồng và con đường."] },
+        { id: "tv-027", difficulty: 1,
+          poem: "Làn sương trắng như tấm khăn voan<br>Phủ kín khu rừng già.",
+          options: ["Làn sương ⇔ khăn voan", "Làn sương ⇔ rừng già", "Khăn voan ⇔ rừng già"],
+          correctIndex: 0,
+          hints: ["", "Sai! Làn sương PHỦ KÍN khu rừng, đó không phải so sánh.", "Sai! Không có so sánh nào giữa khăn voan và rừng già."] },
+    ],
+    "kieu-cau": [
+        { id: "tv-028", difficulty: 1, sentence: "Ôi, lâu đài này thật đẹp quá!", correctIndex: 0,
+          hints: ["", "Sai! Câu có từ 'ôi', 'quá' bày tỏ cảm xúc, đây là câu cảm.", "Sai! Đây không phải câu hỏi.", "Sai! Đây không phải câu yêu cầu."],
+          why: "có từ 'ôi', 'quá' bày tỏ cảm xúc" },
+        { id: "tv-029", difficulty: 1, sentence: "Boo đang lạc trong lâu đài phép thuật.", correctIndex: 1,
+          hints: ["Sai! Câu không có từ cảm thán.", "", "Sai! Cuối câu là dấu chấm, không phải dấu chấm hỏi.", "Sai! Câu này chỉ kể lại sự việc."],
+          why: "thuật lại sự việc" },
+        { id: "tv-030", difficulty: 1, sentence: "Bạn có nhìn thấy chiếc chìa khóa bạc không?", correctIndex: 2,
+          hints: ["Sai! Đây là câu hỏi, không phải cảm thán.", "Sai! Cuối câu là dấu chấm hỏi.", "", "Sai! Đây là câu hỏi, không phải lời yêu cầu."],
+          why: "có cặp từ 'có... không' và dấu chấm hỏi" },
+        { id: "tv-031", difficulty: 1, sentence: "Hãy mở cánh cửa này ra!", correctIndex: 3,
+          hints: ["Sai! Có dấu chấm than nhưng 'Hãy' là từ cầu khiến.", "Sai! Đây là câu cầu khiến.", "Sai! Đây không phải câu hỏi.", ""],
+          why: "có từ 'hãy' thể hiện yêu cầu" },
+        { id: "tv-032", difficulty: 1, sentence: "Chà, ngọn đèn dầu sáng thật rực rỡ làm sao!", correctIndex: 0,
+          hints: ["", "Sai! Câu có từ 'Chà', 'làm sao' thể hiện cảm xúc.", "Sai! Đây không phải câu hỏi.", "Sai! Đây không phải câu yêu cầu."],
+          why: "có từ 'chà', 'làm sao' bày tỏ cảm xúc" },
+        { id: "tv-033", difficulty: 1, sentence: "Lão phù thủy đang đọc thần chú trong phòng.", correctIndex: 1,
+          hints: ["Sai! Câu không có từ cảm thán nào.", "", "Sai! Câu kết thúc bằng dấu chấm.", "Sai! Đây chỉ là câu kể."],
+          why: "thuật lại sự việc" },
+        { id: "tv-034", difficulty: 1, sentence: "Mấy giờ thì mặt trăng lên đỉnh tháp?", correctIndex: 2,
+          hints: ["Sai! Đây là câu hỏi có từ để hỏi 'mấy giờ'.", "Sai! Cuối câu có dấu chấm hỏi.", "", "Sai! Đây là câu hỏi, không phải lời cầu khiến."],
+          why: "có từ để hỏi 'mấy giờ'" },
+        { id: "tv-035", difficulty: 1, sentence: "Boo ơi, hãy cẩn thận với bẫy phép!", correctIndex: 3,
+          hints: ["Sai! Đây là lời nhắc nhở, có từ 'hãy' cầu khiến.", "Sai! Đây là câu cầu khiến (có 'hãy').", "Sai! Đây không phải câu hỏi.", ""],
+          why: "có từ 'hãy' thể hiện lời nhắc nhở, yêu cầu" },
+    ],
+};
 
-    /* ---------- topic: tu-chi-dac-diem-cau (tìm từ chỉ đặc điểm trong câu) ---------- */
-    {
-        id: "tv-001", subject: "tieng-viet", topic: "tu-chi-dac-diem-cau", difficulty: 1,
-        question: "Trong câu: 'Những đám mây xám xịt đang bay lơ lửng trên bầu trời', từ nào là từ chỉ <strong>ĐẶC ĐIỂM</strong>?",
-        choices: ["Đám mây", "Xám xịt", "Lơ lửng"],
-        correctIndex: 1,
-        wrongHints: ["Đó là từ chỉ sự vật.", "", "Đó là từ chỉ hoạt động/trạng thái."],
-        explain: "'Xám xịt' là từ chỉ đặc điểm - miêu tả màu sắc của đám mây."
-    },
-    {
-        id: "tv-002", subject: "tieng-viet", topic: "tu-chi-dac-diem-cau", difficulty: 1,
-        question: "Trong câu: 'Chú chó mực đen tuyền chạy nhanh thoăn thoắt trên sân', từ nào là từ chỉ <strong>ĐẶC ĐIỂM</strong>?",
-        choices: ["Chú chó", "Đen tuyền", "Thoăn thoắt"],
-        correctIndex: 1,
-        wrongHints: ["Đó là từ chỉ sự vật.", "", "Đó là từ chỉ hoạt động."],
-        explain: "'Đen tuyền' là từ chỉ đặc điểm - miêu tả màu lông của chú chó."
-    },
-    {
-        id: "tv-003", subject: "tieng-viet", topic: "tu-chi-dac-diem-cau", difficulty: 1,
-        question: "Trong câu: 'Chiếc lá vàng úa rơi nhẹ nhàng xuống mặt đất', từ nào là từ chỉ <strong>ĐẶC ĐIỂM</strong>?",
-        choices: ["Chiếc lá", "Vàng úa", "Nhẹ nhàng"],
-        correctIndex: 1,
-        wrongHints: ["Đó là từ chỉ sự vật.", "", "Đó là từ chỉ cách thức của hành động rơi."],
-        explain: "'Vàng úa' là từ chỉ đặc điểm - miêu tả màu sắc của chiếc lá."
-    },
-    {
-        id: "tv-004", subject: "tieng-viet", topic: "tu-chi-dac-diem-cau", difficulty: 1,
-        question: "Trong câu: 'Dòng suối trong vắt chảy róc rách qua khe đá', từ nào là từ chỉ <strong>ĐẶC ĐIỂM</strong>?",
-        choices: ["Dòng suối", "Trong vắt", "Róc rách"],
-        correctIndex: 1,
-        wrongHints: ["Đó là từ chỉ sự vật.", "", "Đó là từ chỉ âm thanh."],
-        explain: "'Trong vắt' là từ chỉ đặc điểm - miêu tả độ trong của dòng suối."
-    },
-    {
-        id: "tv-005", subject: "tieng-viet", topic: "tu-chi-dac-diem-cau", difficulty: 1,
-        question: "Trong câu: 'Bầu trời cao vời vợi điểm vài áng mây trắng muốt', từ nào là từ chỉ <strong>ĐẶC ĐIỂM</strong>?",
-        choices: ["Bầu trời", "Vời vợi", "Áng mây"],
-        correctIndex: 1,
-        wrongHints: ["Đó là từ chỉ sự vật.", "", "Đó là từ chỉ sự vật."],
-        explain: "'Vời vợi' là từ chỉ đặc điểm - miêu tả độ cao của bầu trời."
-    },
+/* =====================================================================
+   PHẦN D: CÂU TĨNH ĐẶC BIỆT (STATIC_QUESTIONS)
+   Chỉ dành cho câu KHÔNG tổng quát hóa được thành dạng/khuôn (đề đố
+   vui một-lần, câu gắn chặt với ngữ cảnh riêng...). Viết theo schema
+   đầy đủ: {id, subject, topic, difficulty, question, choices,
+   correctIndex, wrongHints, explain}. Hiện chưa có câu nào.
+   ===================================================================== */
+const STATIC_QUESTIONS = [];
 
-    /* ---------- topic: chinh-ta-s-x (điền s hay x) ---------- */
-    {
-        id: "tv-006", subject: "tieng-viet", topic: "chinh-ta-s-x", difficulty: 1,
-        question: "Điền 's' hay 'x' - cách viết nào dưới đây <strong>ĐÚNG</strong> chính tả?",
-        choices: ["sâu chuỗi, xuất hiện", "xâu chuỗi, suất hiện"],
-        correctIndex: 0,
-        wrongHints: ["", "Sai! Viết đúng phải là: 'sâu chuỗi, xuất hiện'."],
-        explain: "Viết đúng chính tả là: 'sâu chuỗi, xuất hiện'."
-    },
-    {
-        id: "tv-007", subject: "tieng-viet", topic: "chinh-ta-s-x", difficulty: 1,
-        question: "Điền 's' hay 'x' - cách viết nào dưới đây <strong>ĐÚNG</strong> chính tả?",
-        choices: ["sản xuất, xôn xao", "xản xuất, sôn sao"],
-        correctIndex: 0,
-        wrongHints: ["", "Sai! Viết đúng phải là: 'sản xuất, xôn xao'."],
-        explain: "Viết đúng chính tả là: 'sản xuất, xôn xao'."
-    },
-    {
-        id: "tv-008", subject: "tieng-viet", topic: "chinh-ta-s-x", difficulty: 1,
-        question: "Điền 's' hay 'x' - cách viết nào dưới đây <strong>ĐÚNG</strong> chính tả?",
-        choices: ["sung sướng, xinh xắn", "xung xướng, sinh sắn"],
-        correctIndex: 0,
-        wrongHints: ["", "Sai! Viết đúng phải là: 'sung sướng, xinh xắn'."],
-        explain: "Viết đúng chính tả là: 'sung sướng, xinh xắn'."
-    },
-    {
-        id: "tv-009", subject: "tieng-viet", topic: "chinh-ta-s-x", difficulty: 1,
-        question: "Điền 's' hay 'x' - cách viết nào dưới đây <strong>ĐÚNG</strong> chính tả?",
-        choices: ["sáng suốt, xán lạn", "xáng xuốt, sán lạn"],
-        correctIndex: 0,
-        wrongHints: ["", "Sai! Viết đúng phải là: 'sáng suốt, xán lạn'."],
-        explain: "Viết đúng chính tả là: 'sáng suốt, xán lạn'."
-    },
-
-    /* ---------- topic: chinh-ta-r-d-gi (phân biệt r/d/gi/l) ---------- */
-    {
-        id: "tv-010", subject: "tieng-viet", topic: "chinh-ta-r-d-gi", difficulty: 1,
-        question: "Trong bốn cụm từ dưới đây, cụm từ nào viết <strong>ĐÚNG</strong> chính tả?",
-        choices: ["Suối chảy dóc dách", "Nụ cười rạng rỡ", "Sức khỏe rẻo rai", "Tiếng cười ròn rã"],
-        correctIndex: 1,
-        wrongHints: ["Sai! Viết đúng là 'róc rách'.", "", "Sai! Viết đúng là 'dẻo dai'.", "Sai! Viết đúng là 'giòn giã'."],
-        explain: "'Nụ cười rạng rỡ' là cụm từ duy nhất viết đúng chính tả."
-    },
-    {
-        id: "tv-011", subject: "tieng-viet", topic: "chinh-ta-r-d-gi", difficulty: 1,
-        question: "Trong bốn cụm từ dưới đây, cụm từ nào viết <strong>ĐÚNG</strong> chính tả?",
-        choices: ["Hạt sương dung dinh", "Ánh nắng rực rỡ", "Ngày nghỉ rảnh dỗi", "Giọng nói rịu ràng"],
-        correctIndex: 1,
-        wrongHints: ["Sai! Viết đúng là 'rung rinh'.", "", "Sai! Viết đúng là 'rảnh rỗi'.", "Sai! Viết đúng là 'dịu dàng'."],
-        explain: "'Ánh nắng rực rỡ' là cụm từ duy nhất viết đúng chính tả."
-    },
-    {
-        id: "tv-012", subject: "tieng-viet", topic: "chinh-ta-r-d-gi", difficulty: 1,
-        question: "Trong bốn cụm từ dưới đây, cụm từ nào viết <strong>ĐÚNG</strong> chính tả?",
-        choices: ["Ánh đèn nung ninh", "Mặt trời dạng đông", "Hạt gạo dẻo thơm", "Em bé rễ thương"],
-        correctIndex: 2,
-        wrongHints: ["Sai! Viết đúng là 'lung linh'.", "Sai! Viết đúng là 'rạng đông'.", "", "Sai! Viết đúng là 'dễ thương'."],
-        explain: "'Hạt gạo dẻo thơm' là cụm từ duy nhất viết đúng chính tả."
-    },
-
-    /* ---------- topic: thanh-ngu-que-huong ---------- */
-    {
-        id: "tv-013", subject: "tieng-viet", topic: "thanh-ngu-que-huong", difficulty: 1,
-        question: "Thành ngữ nào dưới đây <strong>KHÔNG</strong> nói về quê hương, đất nước?",
-        choices: ["Non xanh nước biếc", "Thức khuya dậy sớm", "Chôn rau cắt rốn", "Quê cha đất tổ"],
-        correctIndex: 1,
-        wrongHints: ["Đây LÀ thành ngữ về quê hương.", "", "Đây LÀ thành ngữ về quê hương.", "Đây LÀ thành ngữ về quê hương."],
-        explain: "'Thức khuya dậy sớm' nói về sự chăm chỉ, KHÔNG phải thành ngữ về quê hương."
-    },
-    {
-        id: "tv-014", subject: "tieng-viet", topic: "thanh-ngu-que-huong", difficulty: 1,
-        question: "Thành ngữ nào dưới đây <strong>KHÔNG</strong> nói về quê hương, đất nước?",
-        choices: ["Non sông gấm vóc", "Dám nghĩ dám làm", "Chôn rau cắt rốn", "Thẳng cánh cò bay"],
-        correctIndex: 1,
-        wrongHints: ["Đây LÀ thành ngữ về quê hương.", "", "Đây LÀ thành ngữ về quê hương.", "Đây LÀ thành ngữ về quê hương."],
-        explain: "'Dám nghĩ dám làm' nói về đức tính mạnh dạn, KHÔNG phải thành ngữ về quê hương."
-    },
-    {
-        id: "tv-015", subject: "tieng-viet", topic: "thanh-ngu-que-huong", difficulty: 1,
-        question: "Thành ngữ nào dưới đây <strong>KHÔNG</strong> nói về quê hương, đất nước?",
-        choices: ["Quê cha đất tổ", "Học một biết mười", "Non xanh nước biếc", "Chôn rau cắt rốn"],
-        correctIndex: 1,
-        wrongHints: ["Đây LÀ thành ngữ về quê hương.", "", "Đây LÀ thành ngữ về quê hương.", "Đây LÀ thành ngữ về quê hương."],
-        explain: "'Học một biết mười' nói về sự thông minh, KHÔNG phải thành ngữ về quê hương."
-    },
-
-    /* ---------- topic: ca-dao-tuc-ngu (điền từ vào câu ca dao) ---------- */
-    {
-        id: "tv-016", subject: "tieng-viet", topic: "ca-dao-tuc-ngu", difficulty: 1,
-        question: "Điền từ còn thiếu vào câu: \"Công cha như ___, nghĩa mẹ như nước trong nguồn chảy ra.\"",
-        choices: ["núi Thái Sơn", "núi cao biển rộng", "cây đại thụ", "biển Đông"],
-        correctIndex: 0,
-        wrongHints: ["", "Sai! Đây không phải câu gốc.", "Sai! Đây không phải câu gốc.", "Sai! Đây không phải câu gốc."],
-        explain: "Câu đúng: \"Công cha như núi Thái Sơn, nghĩa mẹ như nước trong nguồn chảy ra.\""
-    },
-    {
-        id: "tv-017", subject: "tieng-viet", topic: "ca-dao-tuc-ngu", difficulty: 1,
-        question: "Điền từ còn thiếu vào câu: \"Anh em như thể ___, rách lành đùm bọc dở hay đỡ đần.\"",
-        choices: ["tay chân", "chân tay", "cá tôm", "ruột rà"],
-        correctIndex: 0,
-        wrongHints: ["", "Sai! Câu gốc là 'tay chân'.", "Sai! Đây không phải câu gốc.", "Sai! Đây không phải câu gốc."],
-        explain: "Câu đúng: \"Anh em như thể tay chân, rách lành đùm bọc dở hay đỡ đần.\""
-    },
-    {
-        id: "tv-018", subject: "tieng-viet", topic: "ca-dao-tuc-ngu", difficulty: 1,
-        question: "Điền từ còn thiếu vào câu: \"Nhiễu điều phủ lấy ___, người trong một nước phải thương nhau cùng.\"",
-        choices: ["giá gương", "tấm gương", "gương soi", "bức tranh"],
-        correctIndex: 0,
-        wrongHints: ["", "Sai! Câu gốc là 'giá gương'.", "Sai! Đây không phải câu gốc.", "Sai! Đây không phải câu gốc."],
-        explain: "Câu đúng: \"Nhiễu điều phủ lấy giá gương, người trong một nước phải thương nhau cùng.\""
-    },
-
-    /* ---------- topic: dau-cau (tìm dấu chấm đặt sai vị trí) ---------- */
-    {
-        id: "tv-019", subject: "tieng-viet", topic: "dau-cau", difficulty: 1,
-        question: "\"Trong lâu đài, mỗi kẻ một việc(1). Lính canh gác cổng(2). Tuần tra tháp canh. Phù thủy già lẩm nhẩm thần chú(3). Triệu hồi bóng ma. Lũ yêu tinh nhóm lò, luyện phép thuật(4).\"<br>Hỏi dấu chấm số mấy bị đặt <strong>SAI</strong> vị trí?",
-        choices: ["Dấu chấm (1)", "Dấu chấm (2)", "Dấu chấm (3)", "Dấu chấm (4)"],
-        correctIndex: 1,
-        wrongHints: ["Sai! Dấu chấm (1) đặt đúng vị trí.", "", "Sai! Dấu chấm (3) đặt đúng vị trí.", "Sai! Dấu chấm (4) đặt đúng vị trí."],
-        explain: "Dấu chấm (2) cắt sai câu: 'Lính canh gác cổng, tuần tra tháp canh' phải là một câu."
-    },
-    {
-        id: "tv-020", subject: "tieng-viet", topic: "dau-cau", difficulty: 1,
-        question: "\"Trong lâu đài, mỗi kẻ một việc(1). Bọn yêu tinh nhỏ gom củi khô(2). Nhóm lò lửa lớn. Phù thủy già đọc thần chú(3). Gọi gió triệu sét. Lũ quạ bay rợp trời đen kịt(4).\"<br>Hỏi dấu chấm số mấy bị đặt <strong>SAI</strong> vị trí?",
-        choices: ["Dấu chấm (1)", "Dấu chấm (2)", "Dấu chấm (3)", "Dấu chấm (4)"],
-        correctIndex: 1,
-        wrongHints: ["Sai! Dấu chấm (1) đặt đúng vị trí.", "", "Sai! Dấu chấm (3) đặt đúng vị trí.", "Sai! Dấu chấm (4) đặt đúng vị trí."],
-        explain: "Dấu chấm (2) cắt sai câu: 'Bọn yêu tinh nhỏ gom củi khô, nhóm lò lửa lớn' phải là một câu."
-    },
-    {
-        id: "tv-021", subject: "tieng-viet", topic: "dau-cau", difficulty: 1,
-        question: "\"Trong lâu đài, mỗi kẻ một việc(1). Phù thủy già nghiền ngẫm sách cổ(2). Tìm kiếm phép thuật. Lũ dơi treo mình trên xà nhà(3). Rỉ rả kêu suốt đêm(4).\"<br>Hỏi dấu chấm số mấy bị đặt <strong>SAI</strong> vị trí?",
-        choices: ["Dấu chấm (1)", "Dấu chấm (2)", "Dấu chấm (3)", "Dấu chấm (4)"],
-        correctIndex: 1,
-        wrongHints: ["Sai! Dấu chấm (1) đặt đúng vị trí.", "", "Sai! Dấu chấm (3) đặt đúng vị trí.", "Sai! Dấu chấm (4) đặt đúng vị trí."],
-        explain: "Dấu chấm (2) cắt sai câu: 'Phù thủy già nghiền ngẫm sách cổ, tìm kiếm phép thuật' phải là một câu."
-    },
-
-    /* ---------- topic: tu-chi-dac-diem-doan (tìm từ chỉ đặc điểm trong đoạn văn) ---------- */
-    {
-        id: "tv-022", subject: "tieng-viet", topic: "tu-chi-dac-diem-doan", difficulty: 1,
-        question: "Đoạn văn: \"Màn đêm đen kịt bao trùm lâu đài, những ngọn nến le lói chập chờn trong gió, những bức tường rêu phong cổ kính đứng im lìm giữa màn sương.\"<br>Trong các từ sau, từ nào là từ chỉ <strong>ĐẶC ĐIỂM</strong>?",
-        choices: ["Màn đêm", "Ngọn nến", "Đen kịt", "Bức tường"],
-        correctIndex: 2,
-        wrongHints: ["Sai! 'Màn đêm' là từ chỉ sự vật.", "Sai! 'Ngọn nến' là từ chỉ sự vật.", "", "Sai! 'Bức tường' là từ chỉ sự vật."],
-        explain: "'Đen kịt' là từ chỉ đặc điểm (tính từ)."
-    },
-    {
-        id: "tv-023", subject: "tieng-viet", topic: "tu-chi-dac-diem-doan", difficulty: 1,
-        question: "Đoạn văn: \"Lão phù thủy già nua chậm chạp bước qua hành lang tối tăm, chiếc áo choàng rách nát kéo lê trên sàn đá lạnh lẽo.\"<br>Trong các từ sau, từ nào là từ chỉ <strong>ĐẶC ĐIỂM</strong>?",
-        choices: ["Lão phù thủy", "Chậm chạp", "Áo choàng", "Sàn đá"],
-        correctIndex: 1,
-        wrongHints: ["Sai! 'Lão phù thủy' là từ chỉ sự vật.", "", "Sai! 'Áo choàng' là từ chỉ sự vật.", "Sai! 'Sàn đá' là từ chỉ sự vật."],
-        explain: "'Chậm chạp' là từ chỉ đặc điểm (tính từ)."
-    },
-    {
-        id: "tv-024", subject: "tieng-viet", topic: "tu-chi-dac-diem-doan", difficulty: 1,
-        question: "Đoạn văn: \"Ngọn lửa xanh lét bùng lên từ vạc dầu, tỏa ra thứ ánh sáng ma quái rùng rợn khắp căn phòng.\"<br>Trong các từ sau, từ nào là từ chỉ <strong>ĐẶC ĐIỂM</strong>?",
-        choices: ["Ngọn lửa", "Vạc dầu", "Xanh lét", "Căn phòng"],
-        correctIndex: 2,
-        wrongHints: ["Sai! 'Ngọn lửa' là từ chỉ sự vật.", "Sai! 'Vạc dầu' là từ chỉ sự vật.", "", "Sai! 'Căn phòng' là từ chỉ sự vật."],
-        explain: "'Xanh lét' là từ chỉ đặc điểm (tính từ)."
-    },
-
-    /* ---------- topic: so-sanh (tìm hình ảnh so sánh trong thơ) ---------- */
-    {
-        id: "tv-025", subject: "tieng-viet", topic: "so-sanh", difficulty: 1,
-        question: "\"Ngọn tháp vươn như lưỡi kiếm<br>Đâm thủng màn đêm u tối.\"<br>Trong hai câu thơ trên, sự vật nào được <strong>so sánh</strong> với sự vật nào?",
-        choices: ["Ngọn tháp ⇔ lưỡi kiếm", "Ngọn tháp ⇔ màn đêm", "Lưỡi kiếm ⇔ màn đêm"],
-        correctIndex: 0,
-        wrongHints: ["", "Sai! Ngọn tháp ĐÂM THỦNG màn đêm, đó không phải so sánh.", "Sai! Không có so sánh nào giữa lưỡi kiếm và màn đêm."],
-        explain: "Hình ảnh so sánh: Ngọn tháp ⇔ lưỡi kiếm (có từ so sánh 'như')."
-    },
-    {
-        id: "tv-026", subject: "tieng-viet", topic: "so-sanh", difficulty: 1,
-        question: "\"Mặt trăng treo như chiếc đèn lồng<br>Soi sáng con đường về.\"<br>Trong hai câu thơ trên, sự vật nào được <strong>so sánh</strong> với sự vật nào?",
-        choices: ["Mặt trăng ⇔ đèn lồng", "Mặt trăng ⇔ con đường", "Đèn lồng ⇔ con đường"],
-        correctIndex: 0,
-        wrongHints: ["", "Sai! Mặt trăng SOI SÁNG con đường, đó không phải so sánh.", "Sai! Không có so sánh nào giữa đèn lồng và con đường."],
-        explain: "Hình ảnh so sánh: Mặt trăng ⇔ đèn lồng (có từ so sánh 'như')."
-    },
-    {
-        id: "tv-027", subject: "tieng-viet", topic: "so-sanh", difficulty: 1,
-        question: "\"Làn sương trắng như tấm khăn voan<br>Phủ kín khu rừng già.\"<br>Trong hai câu thơ trên, sự vật nào được <strong>so sánh</strong> với sự vật nào?",
-        choices: ["Làn sương ⇔ khăn voan", "Làn sương ⇔ rừng già", "Khăn voan ⇔ rừng già"],
-        correctIndex: 0,
-        wrongHints: ["", "Sai! Làn sương PHỦ KÍN khu rừng, đó không phải so sánh.", "Sai! Không có so sánh nào giữa khăn voan và rừng già."],
-        explain: "Hình ảnh so sánh: Làn sương ⇔ khăn voan (có từ so sánh 'như')."
-    },
-
-    /* ---------- topic: kieu-cau (phân biệt câu kể/hỏi/cảm/khiến) ---------- */
-    {
-        id: "tv-028", subject: "tieng-viet", topic: "kieu-cau", difficulty: 1,
-        question: "Câu: <em>\"Ôi, lâu đài này thật đẹp quá!\"</em><br>Đây là <strong>kiểu câu gì</strong>?",
-        choices: ["Câu cảm", "Câu kể", "Câu hỏi", "Câu khiến"],
-        correctIndex: 0,
-        wrongHints: ["", "Sai! Câu có từ 'ôi', 'quá' bày tỏ cảm xúc, đây là câu cảm.", "Sai! Đây không phải câu hỏi.", "Sai! Đây không phải câu yêu cầu."],
-        explain: "'Ôi, lâu đài này thật đẹp quá!' là câu cảm (có từ 'ôi', 'quá' bày tỏ cảm xúc)."
-    },
-    {
-        id: "tv-029", subject: "tieng-viet", topic: "kieu-cau", difficulty: 1,
-        question: "Câu: <em>\"Boo đang lạc trong lâu đài phép thuật.\"</em><br>Đây là <strong>kiểu câu gì</strong>?",
-        choices: ["Câu cảm", "Câu kể", "Câu hỏi", "Câu khiến"],
-        correctIndex: 1,
-        wrongHints: ["Sai! Câu không có từ cảm thán.", "", "Sai! Cuối câu là dấu chấm, không phải dấu chấm hỏi.", "Sai! Câu này chỉ kể lại sự việc."],
-        explain: "'Boo đang lạc trong lâu đài phép thuật.' là câu kể (thuật lại sự việc)."
-    },
-    {
-        id: "tv-030", subject: "tieng-viet", topic: "kieu-cau", difficulty: 1,
-        question: "Câu: <em>\"Bạn có nhìn thấy chiếc chìa khóa bạc không?\"</em><br>Đây là <strong>kiểu câu gì</strong>?",
-        choices: ["Câu cảm", "Câu kể", "Câu hỏi", "Câu khiến"],
-        correctIndex: 2,
-        wrongHints: ["Sai! Đây là câu hỏi, không phải cảm thán.", "Sai! Cuối câu là dấu chấm hỏi.", "", "Sai! Đây là câu hỏi, không phải lời yêu cầu."],
-        explain: "'Bạn có nhìn thấy chiếc chìa khóa bạc không?' là câu hỏi (có cặp từ 'có... không' và dấu chấm hỏi)."
-    },
-    {
-        id: "tv-031", subject: "tieng-viet", topic: "kieu-cau", difficulty: 1,
-        question: "Câu: <em>\"Hãy mở cánh cửa này ra!\"</em><br>Đây là <strong>kiểu câu gì</strong>?",
-        choices: ["Câu cảm", "Câu kể", "Câu hỏi", "Câu khiến"],
-        correctIndex: 3,
-        wrongHints: ["Sai! Có dấu chấm than nhưng 'Hãy' là từ cầu khiến.", "Sai! Đây là câu cầu khiến.", "Sai! Đây không phải câu hỏi.", ""],
-        explain: "'Hãy mở cánh cửa này ra!' là câu khiến (có từ 'hãy' thể hiện yêu cầu)."
-    },
-    {
-        id: "tv-032", subject: "tieng-viet", topic: "kieu-cau", difficulty: 1,
-        question: "Câu: <em>\"Chà, ngọn đèn dầu sáng thật rực rỡ làm sao!\"</em><br>Đây là <strong>kiểu câu gì</strong>?",
-        choices: ["Câu cảm", "Câu kể", "Câu hỏi", "Câu khiến"],
-        correctIndex: 0,
-        wrongHints: ["", "Sai! Câu có từ 'Chà', 'làm sao' thể hiện cảm xúc.", "Sai! Đây không phải câu hỏi.", "Sai! Đây không phải câu yêu cầu."],
-        explain: "'Chà, ngọn đèn dầu sáng thật rực rỡ làm sao!' là câu cảm (có 'chà', 'làm sao')."
-    },
-    {
-        id: "tv-033", subject: "tieng-viet", topic: "kieu-cau", difficulty: 1,
-        question: "Câu: <em>\"Lão phù thủy đang đọc thần chú trong phòng.\"</em><br>Đây là <strong>kiểu câu gì</strong>?",
-        choices: ["Câu cảm", "Câu kể", "Câu hỏi", "Câu khiến"],
-        correctIndex: 1,
-        wrongHints: ["Sai! Câu không có từ cảm thán nào.", "", "Sai! Câu kết thúc bằng dấu chấm.", "Sai! Đây chỉ là câu kể."],
-        explain: "'Lão phù thủy đang đọc thần chú trong phòng.' là câu kể (thuật lại sự việc)."
-    },
-    {
-        id: "tv-034", subject: "tieng-viet", topic: "kieu-cau", difficulty: 1,
-        question: "Câu: <em>\"Mấy giờ thì mặt trăng lên đỉnh tháp?\"</em><br>Đây là <strong>kiểu câu gì</strong>?",
-        choices: ["Câu cảm", "Câu kể", "Câu hỏi", "Câu khiến"],
-        correctIndex: 2,
-        wrongHints: ["Sai! Đây là câu hỏi có từ để hỏi 'mấy giờ'.", "Sai! Cuối câu có dấu chấm hỏi.", "", "Sai! Đây là câu hỏi, không phải lời cầu khiến."],
-        explain: "'Mấy giờ thì mặt trăng lên đỉnh tháp?' là câu hỏi (có từ để hỏi 'mấy giờ')."
-    },
-    {
-        id: "tv-035", subject: "tieng-viet", topic: "kieu-cau", difficulty: 1,
-        question: "Câu: <em>\"Boo ơi, hãy cẩn thận với bẫy phép!\"</em><br>Đây là <strong>kiểu câu gì</strong>?",
-        choices: ["Câu cảm", "Câu kể", "Câu hỏi", "Câu khiến"],
-        correctIndex: 3,
-        wrongHints: ["Sai! Đây là lời nhắc nhở, có từ 'hãy' cầu khiến.", "Sai! Đây là câu cầu khiến (có 'hãy').", "Sai! Đây không phải câu hỏi.", ""],
-        explain: "'Boo ơi, hãy cẩn thận với bẫy phép!' là câu khiến (có từ 'hãy' thể hiện lời nhắc nhở, yêu cầu)."
-    },
-];
+/* =====================================================================
+   BIÊN DỊCH QUESTION_BANK (tự động - không sửa tay)
+   ===================================================================== */
+const QUESTION_BANK = [];
+for (const topic in TV_TEMPLATES) {
+    (TV_MATERIALS[topic] || []).forEach(m => {
+        const built = TV_TEMPLATES[topic].build(m);
+        QUESTION_BANK.push({
+            id: m.id, subject: "tieng-viet", topic: topic,
+            difficulty: m.difficulty || 1,
+            question: built.question,
+            choices: built.choices,
+            correctIndex: built.correctIndex,
+            wrongHints: built.wrongHints,
+            explain: built.explain
+        });
+    });
+}
+STATIC_QUESTIONS.forEach(q => QUESTION_BANK.push(q));
 
 /* =====================================================================
    BỘ CHỌN CÂU HỎI TỪ NGÂN HÀNG
@@ -455,11 +541,9 @@ function getPuzzle(cfg, difficulty = 1) {
 }
 
 /* =====================================================================
-   GENERATOR TOÁN (đề sinh ngẫu nhiên, đáp án tự tính)
+   PHẦN E: GENERATOR TOÁN (hiện thực các dạng trong MATH_SPECS)
    Mỗi hàm nhận diff (1 = Cơ Bản, 2 = Thử Thách) và trả về:
    { puzzleHTML, choices: [{text, isCorrect, wrongMsg}], correctMsg }
-   Mức Cơ Bản dùng số nhỏ hơn; các dạng toán nâng cao (tổng-hiệu,
-   tổng-tỉ, phép toán lạ...) có phiên bản dễ cùng bối cảnh truyện.
    ===================================================================== */
 function fillWrongs(wrongs, correct, spread) {
     wrongs = [...new Set(wrongs)].filter(w => w !== correct && w > 0 && Number.isInteger(w)).slice(0, 3);
@@ -534,7 +618,6 @@ function genChieuRongHCN(diff = 1) {
 
 function genPhepToanLa1(diff = 1) {
     if (diff !== 2) {
-        // Mức dễ: phép toán lạ một bước, số nhỏ
         let a = rInt(2, 9), b = rInt(2, 9);
         while (a === b) b = rInt(2, 9);
         let correct = a * b + a;
@@ -558,7 +641,6 @@ function genPhepToanLa1(diff = 1) {
 
 function genTongHieu(diff = 1) {
     if (diff !== 2) {
-        // Mức dễ: biết thùng A và phần hơn, tìm thùng B (phép trừ)
         let A = rInt(20, 90), D = rInt(5, A - 10);
         let B = A - D;
         let wrongs = fillWrongs([A + D, A, D], B, 8);
@@ -582,7 +664,6 @@ function genTongHieu(diff = 1) {
 
 function genTongTi(diff = 1) {
     if (diff !== 2) {
-        // Mức dễ: gấp một số lên nhiều lần (phép nhân)
         let r = rInt(2, 5), B = rInt(3, 12);
         let A = r * B;
         let wrongs = fillWrongs([B + r, B, A + B], A, 6);
@@ -603,7 +684,6 @@ function genTongTi(diff = 1) {
 
 function genChuyenGapBa(diff = 1) {
     if (diff !== 2) {
-        // Mức dễ: tìm phần chênh lệch giữa hai bể (phép trừ)
         let b = rInt(5, 40), a = rInt(b + 5, b + 40);
         let correct = a - b;
         let wrongs = fillWrongs([a + b, a, b], correct, 6);
@@ -631,7 +711,6 @@ function genChuyenGapBa(diff = 1) {
 
 function genTongTiHieu(diff = 1) {
     if (diff !== 2) {
-        // Mức dễ: biết B và tỉ lệ, tính hiệu A-B (nhân rồi trừ)
         let k = rInt(2, 5), B = rInt(4, 15);
         let A = k * B, correct = A - B;
         let wrongs = fillWrongs([A, B, A + B], correct, 5);
@@ -653,7 +732,6 @@ function genTongTiHieu(diff = 1) {
 
 function genPhepToanLa2(diff = 1) {
     if (diff !== 2) {
-        // Mức dễ: phép gương một bước, không lồng nhau
         let x = rInt(3, 7), y = rInt(3, 7);
         while (x === y) y = rInt(3, 7);
         let correct = x * y - x - y + 1;
@@ -771,9 +849,10 @@ const MATH_GENERATORS = {
 
 /* =====================================================================
    GENERATOR CHO 5 PHASE ĐÁNH BOSS (Đỉnh Tháp)
-   Nhận diff như generator thường. Phase 2 và 4 lấy câu tiếng Việt từ
-   QUESTION_BANK nên thêm câu vào topic tu-chi-dac-diem-doan / kieu-cau
-   là boss cũng có đề mới.
+   Nhận diff như generator thường; dạng toán của boss có spec riêng
+   (boss-1, boss-3, boss-5 trong MATH_SPECS). Phase 2 và 4 lấy câu
+   tiếng Việt từ ngân hàng nên thêm ngữ liệu vào topic
+   tu-chi-dac-diem-doan / kieu-cau là boss cũng có đề mới.
    ===================================================================== */
 function genBossPhase1(diff = 1) {
     let a = diff === 2 ? rInt(5, 20) : rInt(2, 9);
@@ -799,7 +878,6 @@ function genBossPhase2(diff = 1) {
 
 function genBossPhase3(diff = 1) {
     if (diff !== 2) {
-        // Mức dễ: biết tổng và một số, tìm số kia rồi nhân
         let A = rInt(3, 10), B = rInt(2, 9);
         let S = A + B;
         let correct = A * B;
@@ -830,7 +908,6 @@ function genBossPhase4(diff = 1) {
 
 function genBossPhase5(diff = 1) {
     if (diff !== 2) {
-        // Mức dễ: suy luận ngược 2 bước (nhân A rồi trừ D được E)
         let x = rInt(3, 9), A = rInt(2, 5), D = rInt(2, 10);
         let E = x * A - D;
         while (E <= 0) { D = rInt(2, 10); E = x * A - D; }
