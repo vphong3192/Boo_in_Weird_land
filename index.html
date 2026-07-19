@@ -307,7 +307,8 @@
                 </div>
             </div>
             <div class="stats-box">
-                Máu (HP): <span id="ui-hp">❤️❤️❤️</span>
+                Máu (HP): <span id="ui-hp">❤️❤️❤️</span><br>
+                Chế độ: <span id="ui-mode">🌱 Cơ bản</span>
             </div>
             <div class="inventory-box" style="flex-grow:0;">
                 <h3 style="margin-top:0; border-bottom: 1px solid #5c4a3d; padding-bottom:4px; font-size:13px;">🎒 Hành Trang</h3>
@@ -528,6 +529,7 @@
         let state = {
             hp: 3,
             maxHp: 3,
+            difficulty: 1,
             inventory: [], 
             inventoryNames: [], 
             fragments: [],
@@ -610,8 +612,13 @@
                 renderText: () => `<p>Boo là học sinh lớp <strong>3Q3</strong> trường Tiểu học Lý Thái Tổ. Hôm nay, bài kiểm tra học kì môn Toán trả về với con số <strong style="color:red;">2 điểm</strong> đỏ chói.</p>
                                    <p>Cô Mai nhìn Boo, khẽ thở dài: <em>"Boo, sau giờ học cô muốn gặp riêng em một chút."</em></p>
                                    <p>Hoảng sợ, Boo không dám về nhà. Cậu lén chạy lên <strong>gác xép tầng 5</strong> của trường - nơi bị khóa từ lâu vì người ta đồn có ma. Cánh cửa gỗ cũ kĩ bật mở, một luồng sáng tím hút Boo vào trong...</p>
-                                   <p style="color:#61130d; font-weight:bold;">Đây là Text Adventure giải đố kết hợp Toán & Tiếng Việt. Hãy bật âm thanh để có trải nghiệm tốt nhất!</p>`,
-                renderChoices: () => [{ text: "▶️ Bước qua cánh cổng ánh sáng", action: () => enterRoom(1), type: "action" }]
+                                   <p style="color:#61130d; font-weight:bold;">Đây là Text Adventure giải đố kết hợp Toán & Tiếng Việt. Hãy bật âm thanh để có trải nghiệm tốt nhất!</p>
+                                   <p>💡 <em>Mẹo: ở mỗi câu đố, lần trả lời sai đầu tiên Boo chỉ nhận gợi ý; sai lần thứ hai mới bị trừ máu.</em></p>
+                                   <p style="font-weight:bold;">Hãy chọn chế độ chơi để bước qua cánh cổng ánh sáng:</p>`,
+                renderChoices: () => [
+                    { text: "🌱 Chế độ Cơ Bản - bài tập vừa sức lớp 3", action: () => { state.difficulty = 1; enterRoom(1); }, type: "action" },
+                    { text: "🔥 Chế độ Thử Thách - có thêm toán nâng cao", action: () => { state.difficulty = 2; enterRoom(1); }, type: "action" }
+                ]
             },
             1: {
                 title: "Ngục Tối Lạnh Lẽo", emoji: "⛓️", music: MUSIC_DUNGEON,
@@ -783,19 +790,19 @@
                                 <p style="font-size:20px;">${hpBar}</p>
                                 <p>"Hahaha! Ngươi dám cả gan xông vào đây ư? Một đứa nhóc lớp 3 mà đòi đánh bại ta? Để xem ngươi có đủ thông minh để vượt qua 5 thử thách của ta không!"</p>
                                 <p style="color:#c9a96e;">⚔️ Cần <strong>4 mũi tên thần</strong> xuyên giáp, rồi <strong>Bom Ánh Sáng</strong> kết liễu!</p>`;
-                        if (!state.q[8] || state.q[8]._phase !== 0) { state.q[8] = genBossPhase1(); state.q[8]._phase = 0; }
+                        if (!state.q[8] || state.q[8]._phase !== 0) { state.q[8] = genBossPhase1(state.difficulty); state.q[8]._phase = 0; }
                     } else if (phase >= 1 && phase <= 3) {
                         text = `<p style="font-size:20px;">${hpBar}</p>
                                 <p style="color:#c9a96e;">🏹 Mũi tên thần thứ <strong>${phase}</strong> đã bắn trúng! Lão phù thủy lảo đảo lùi lại!</p>`;
                         if (!state.q[8] || state.q[8]._phase !== phase) {
                             let gens = [null, genBossPhase2, genBossPhase3, genBossPhase4];
-                            state.q[8] = gens[phase](); state.q[8]._phase = phase;
+                            state.q[8] = gens[phase](state.difficulty); state.q[8]._phase = phase;
                         }
                     } else if (phase === 4) {
                         text = `<p style="font-size:20px;">${hpBar}</p>
                                 <p style="color:#c9a96e;">⚡ Cả 4 mũi tên thần đã xuyên thủng lớp giáp phép! Lão phù thủy quỳ gối, yếu ớt!</p>
                                 <p style="font-weight:bold;">💣 ĐÃ ĐẾN LÚC KÍCH HOẠT <strong>BOM ÁNH SÁNG</strong>!</p>`;
-                        if (!state.q[8] || state.q[8]._phase !== 4) { state.q[8] = genBossPhase5(); state.q[8]._phase = 4; }
+                        if (!state.q[8] || state.q[8]._phase !== 4) { state.q[8] = genBossPhase5(state.difficulty); state.q[8]._phase = 4; }
                     }
 
                     return text + (state.q[8] ? state.q[8].puzzleHTML : "");
@@ -1254,7 +1261,7 @@
         function enterRoom(roomId) {
             state.currentRoom = roomId;
             if (!state.visitedRooms.includes(roomId)) state.visitedRooms.push(roomId);
-            if (ROOM_PUZZLES[roomId]) state.q[roomId] = getPuzzle(ROOM_PUZZLES[roomId]);
+            if (ROOM_PUZZLES[roomId]) state.q[roomId] = getPuzzle(ROOM_PUZZLES[roomId], state.difficulty);
             playMusic(rooms[roomId].music);
             document.getElementById("ui-log").innerHTML = "";
             updateUI(roomId);
@@ -1281,6 +1288,7 @@
 
             document.getElementById("ui-room-img").innerText = room.emoji;
             document.getElementById("ui-hp").innerText = "❤️".repeat(state.hp) + "🖤".repeat(state.maxHp - state.hp);
+            document.getElementById("ui-mode").innerText = state.difficulty === 2 ? "🔥 Thử thách" : "🌱 Cơ bản";
             
             const invList = document.getElementById("ui-inventory");
             if (state.inventoryNames.length === 0) {
@@ -1299,6 +1307,15 @@
         }
 
         function wrongAnswer(msg, fallBackRoomId = null) {
+            // Sai lần đầu ở mỗi câu đố: chỉ nhận gợi ý, chưa trừ máu
+            const q = state.q[state.currentRoom];
+            if (q && !q.hintGiven) {
+                q.hintGiven = true;
+                logMessage(`💡 Chưa đúng! ${msg} Bình tĩnh thử lại nhé - sai lần nữa mới bị trừ máu.`, "#b8860b");
+                updateUI(state.currentRoom);
+                return;
+            }
+
             let autoHealed = false;
             if (state.inventory.includes("RuouHoiPhuc")) {
                 removeItem("RuouHoiPhuc");
@@ -1417,6 +1434,7 @@
         function resetGame() {
             state.hp = 3;
             state.maxHp = 3;
+            state.difficulty = 1;
             state.inventory = [];
             state.inventoryNames = [];
             state.fragments = [];
@@ -1551,6 +1569,7 @@
             const saveData = {
                 hp: state.hp,
                 maxHp: state.maxHp,
+                difficulty: state.difficulty,
                 inventory: state.inventory,
                 inventoryNames: state.inventoryNames,
                 fragments: state.fragments,
@@ -1574,6 +1593,7 @@
                 const saveData = JSON.parse(raw);
                 state.hp = saveData.hp;
                 state.maxHp = saveData.maxHp;
+                state.difficulty = saveData.difficulty || 1;
                 state.inventory = saveData.inventory;
                 state.inventoryNames = saveData.inventoryNames;
                 state.fragments = saveData.fragments || [];

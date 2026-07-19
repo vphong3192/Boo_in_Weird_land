@@ -7,12 +7,23 @@
    đụng vào engine.
 
    ---------------------------------------------------------------------
-   1. CÁCH THÊM CÂU HỎI TRẮC NGHIỆM MỚI
-   Thêm một object vào mảng QUESTION_BANK theo mẫu:
+   1. ĐỘ KHÓ VÀ CHẾ ĐỘ CHƠI
+   Mỗi câu hỏi có nhãn difficulty:
+   - 1 = CƠ BẢN   : bám sát chuẩn kiến thức lớp 3
+   - 2 = NÂNG CAO : toán tư duy / bồi dưỡng học sinh giỏi
+   Đầu game bé chọn chế độ:
+   - 🌱 Cơ Bản   : chỉ nạp câu difficulty 1, generator toán chạy mức dễ
+                   (số nhỏ, bài toán ít bước)
+   - 🔥 Thử Thách: nạp toàn bộ câu hỏi, generator toán chạy mức khó
+
+   ---------------------------------------------------------------------
+   2. CÁCH THÊM CÂU HỎI TRẮC NGHIỆM MỚI
+   QUESTION_BANK chia làm 2 phần độc lập: PHẦN I - TOÁN và
+   PHẦN II - TIẾNG VIỆT. Thêm câu vào đúng phần theo mẫu:
 
    {
-     id: "tv-036",              // mã duy nhất, không trùng
-     subject: "tieng-viet",     // "tieng-viet" hoặc "toan"
+     id: "tv-036",              // mã duy nhất ("toan-###" hoặc "tv-###")
+     subject: "tieng-viet",     // "toan" hoặc "tieng-viet"
      topic: "kieu-cau",         // chủ đề - phòng nào dùng topic nào xem bảng dưới
      difficulty: 1,             // 1 = cơ bản, 2 = nâng cao
      question: "Nội dung câu hỏi (được dùng thẻ HTML như <strong>, <br>)",
@@ -24,10 +35,12 @@
    }
 
    Mỗi lần vào phòng, game chọn NGẪU NHIÊN 1 câu trong topic của phòng
-   đó, nên một topic càng nhiều câu thì chơi lại càng đỡ trùng đề.
+   (đã lọc theo chế độ chơi). Topic toán có cả câu tĩnh lẫn generator
+   thì hai nguồn được trộn ngẫu nhiên 50/50 - cứ thêm câu toán tĩnh
+   vào PHẦN I là game tự dùng.
 
    ---------------------------------------------------------------------
-   2. TOPIC ĐANG ĐƯỢC CÁC PHÒNG SỬ DỤNG
+   3. TOPIC ĐANG ĐƯỢC CÁC PHÒNG SỬ DỤNG
 
    Tiếng Việt (câu tĩnh trong QUESTION_BANK):
    - Phòng 4  (Sân Sau)           : tu-chi-dac-diem-cau
@@ -40,7 +53,8 @@
    - Phòng 21 (Điện Thơ Ca)       : so-sanh
    - Phòng 25 (Thư Phòng Ngôn Từ) : kieu-cau              (Boss phase 4 cũng dùng)
 
-   Toán (đề sinh ngẫu nhiên bằng hàm, xem MATH_GENERATORS cuối file):
+   Toán (đề sinh ngẫu nhiên bằng hàm, xem MATH_GENERATORS cuối file;
+   câu toán tĩnh cùng topic sẽ được trộn chung):
    - Phòng 1: thu-tu-phep-tinh      - Phòng 3: nhan-roi-tru
    - Phòng 5: bang-nhan             - Phòng 7: chieu-rong-hcn
    - Phòng 10: phep-toan-la-1       - Phòng 11: tong-hieu
@@ -50,22 +64,36 @@
    - Phòng 24: chu-vi-hinh-vuong    - Phòng 26: tim-so-bi-chia
 
    ---------------------------------------------------------------------
-   3. NẠP ĐỀ TỪ FILE PDF/DOCX
-   - Bỏ file đề vào thư mục de-bai/ trong repo.
-   - Nhờ Claude Code: "Đọc file de-bai/<tên file>, trích các câu trắc
-     nghiệm và thêm vào QUESTION_BANK trong questions.js theo đúng schema
-     ghi ở đầu file".
-   - Duyệt lại nội dung bằng mắt (bắt buộc với tài liệu dạy trẻ!) rồi commit.
+   4. NẠP ĐỀ TỪ FILE PDF/DOCX (thư mục de-bai/)
+   Kho đề thô chia làm 2 mục độc lập:
+   - de-bai/toan/        : đề toán
+   - de-bai/tieng-viet/  : đề tiếng Việt
+   Quy trình (chi tiết xem de-bai/README.md):
+   1. Bỏ file PDF/docx vào đúng mục.
+   2. Nhờ Claude Code: "Đọc các file mới trong de-bai/, phân loại từng
+      câu (gán topic + độ khó 1/2 theo tiêu chí đầu questions.js) và
+      thêm vào đúng phần TOÁN / TIẾNG VIỆT của QUESTION_BANK".
+   3. Duyệt lại nội dung bằng mắt (bắt buộc với tài liệu dạy trẻ!) rồi commit.
    ===================================================================== */
 
 /* ---------- Hàm tiện ích dùng chung ---------- */
 function rInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 function shuffle(arr) { let a = [...arr]; for (let i = a.length-1;i>0;i--) { let j = rInt(0,i); [a[i],a[j]] = [a[j],a[i]]; } return a; }
 
-/* =====================================================================
-   NGÂN HÀNG CÂU HỎI TĨNH (Tiếng Việt)
-   ===================================================================== */
 const QUESTION_BANK = [
+
+/* =====================================================================
+   PHẦN I: TOÁN (câu tĩnh trích từ đề)
+   Chưa có câu nào - toán hiện dùng generator sinh đề ngẫu nhiên.
+   Câu toán trích từ file PDF/docx trong de-bai/toan/ sẽ thêm vào đây
+   (id "toan-001", "toan-002"...; topic trùng với generator thì hai
+   nguồn tự trộn 50/50, topic mới thì khai báo phòng dùng trong
+   ROOM_PUZZLES ở index.html).
+   ===================================================================== */
+
+/* =====================================================================
+   PHẦN II: TIẾNG VIỆT
+   ===================================================================== */
 
     /* ---------- topic: tu-chi-dac-diem-cau (tìm từ chỉ đặc điểm trong câu) ---------- */
     {
@@ -368,21 +396,29 @@ const QUESTION_BANK = [
 
 /* =====================================================================
    BỘ CHỌN CÂU HỎI TỪ NGÂN HÀNG
-   Engine gọi getPuzzle({topic, frame?, successMsg?, fallback?}):
-   - topic      : tên chủ đề (bảng ở đầu file)
-   - frame(q)   : (tùy chọn) hàm bọc thêm lời dẫn truyện quanh câu hỏi
-   - successMsg : (tùy chọn) lời thưởng hiện trước lời giải thích khi đúng
-   - fallback   : (tùy chọn) id phòng bị đẩy về khi trả lời sai
+   Engine gọi getPuzzle(cfg, difficulty):
+   - cfg.topic      : tên chủ đề (bảng ở đầu file)
+   - cfg.frame(q)   : (tùy chọn) hàm bọc thêm lời dẫn truyện quanh câu hỏi
+   - cfg.successMsg : (tùy chọn) lời thưởng hiện trước lời giải thích khi đúng
+   - cfg.fallback   : (tùy chọn) id phòng bị đẩy về khi trả lời sai
+   - difficulty     : chế độ chơi (1 = Cơ Bản, 2 = Thử Thách)
+   Chế độ Cơ Bản chỉ lấy câu difficulty 1 (nếu topic không có câu dễ nào
+   thì mới dùng tạm câu khó); Thử Thách lấy tất cả. Topic toán có cả
+   generator lẫn câu tĩnh trong ngân hàng thì trộn ngẫu nhiên 50/50.
    Generator toán tự chứa lời dẫn riêng nên bỏ qua frame/successMsg.
    ===================================================================== */
-function pickFromBank(topic) {
+function pickFromBank(topic, difficulty = 1) {
     const list = QUESTION_BANK.filter(q => q.topic === topic);
     if (!list.length) return null;
+    if (difficulty === 1) {
+        const easy = list.filter(q => (q.difficulty || 1) === 1);
+        if (easy.length) return easy[rInt(0, easy.length - 1)];
+    }
     return list[rInt(0, list.length - 1)];
 }
 
-function buildFromBank(cfg) {
-    const q = pickFromBank(cfg.topic);
+function buildFromBank(cfg, difficulty = 1) {
+    const q = pickFromBank(cfg.topic, difficulty);
     if (!q) {
         return {
             puzzleHTML: `<div class="puzzle-box">(Chưa có câu hỏi cho chủ đề "${cfg.topic}" - hãy thêm vào questions.js)</div>`,
@@ -402,23 +438,40 @@ function buildFromBank(cfg) {
     };
 }
 
-function getPuzzle(cfg) {
+function getPuzzle(cfg, difficulty = 1) {
     if (typeof cfg === "string") cfg = { topic: cfg };
-    const p = MATH_GENERATORS[cfg.topic] ? MATH_GENERATORS[cfg.topic]() : buildFromBank(cfg);
+    const gen = MATH_GENERATORS[cfg.topic];
+    const hasBank = QUESTION_BANK.some(q => q.topic === cfg.topic);
+    let p;
+    if (gen && hasBank) p = rInt(0, 1) === 0 ? gen(difficulty) : buildFromBank(cfg, difficulty);
+    else if (gen) p = gen(difficulty);
+    else p = buildFromBank(cfg, difficulty);
     if (cfg.fallback) p.fallbackRoom = cfg.fallback;
     return p;
 }
 
 /* =====================================================================
    GENERATOR TOÁN (đề sinh ngẫu nhiên, đáp án tự tính)
-   Mỗi hàm trả về: { puzzleHTML, choices: [{text, isCorrect, wrongMsg}], correctMsg }
+   Mỗi hàm nhận diff (1 = Cơ Bản, 2 = Thử Thách) và trả về:
+   { puzzleHTML, choices: [{text, isCorrect, wrongMsg}], correctMsg }
+   Mức Cơ Bản dùng số nhỏ hơn; các dạng toán nâng cao (tổng-hiệu,
+   tổng-tỉ, phép toán lạ...) có phiên bản dễ cùng bối cảnh truyện.
    ===================================================================== */
-function genThuTuPhepTinh() {
-    let a = rInt(15, 50), b = rInt(2, 9), c = rInt(3, 9);
+function fillWrongs(wrongs, correct, spread) {
+    wrongs = [...new Set(wrongs)].filter(w => w !== correct && w > 0 && Number.isInteger(w)).slice(0, 3);
+    while (wrongs.length < 3) {
+        let cand = correct + rInt(1, spread) * (rInt(0, 1) ? 1 : -1);
+        if (!wrongs.includes(cand) && cand !== correct && cand > 0) wrongs.push(cand);
+    }
+    return wrongs;
+}
+
+function genThuTuPhepTinh(diff = 1) {
+    let a = diff === 2 ? rInt(15, 50) : rInt(10, 30);
+    let b = diff === 2 ? rInt(2, 9) : rInt(2, 5);
+    let c = diff === 2 ? rInt(3, 9) : rInt(2, 5);
     let correct = a + b * c;
-    let wrongs = [a + b * (c + 1), a + (b + 1) * c, a + b * (c - 1)];
-    wrongs = [...new Set(wrongs)].filter(w => w !== correct && w > 0).slice(0, 3);
-    while (wrongs.length < 3) { let cand = correct + rInt(1, 3) * (rInt(0,1) ? 1 : -1); if (!wrongs.includes(cand) && cand !== correct && cand > 0) wrongs.push(cand); }
+    let wrongs = fillWrongs([a + b * (c + 1), a + (b + 1) * c, a + b * (c - 1)], correct, 3);
     return {
         puzzleHTML: `<div class="puzzle-box">"Mật mã là kết quả phép tính: <strong>${a} + ${b} × ${c}</strong>. Đoán sai mi sẽ bị giật điện!"</div>`,
         choices: shuffle([{text: String(correct), isCorrect: true, wrongMsg: ""},{text: String(wrongs[0]), isCorrect: false, wrongMsg: "Điện giật! Nhớ quy tắc nhân chia trước, cộng trừ sau."},{text: String(wrongs[1]), isCorrect: false, wrongMsg: "Điện giật! Tính lại đi nhóc."},{text: String(wrongs[2]), isCorrect: false, wrongMsg: "Điện giật! Kiểm tra kỹ thứ tự phép tính."}]),
@@ -426,12 +479,13 @@ function genThuTuPhepTinh() {
     };
 }
 
-function genNhanRoiTru() {
-    let pots = rInt(3, 8), spiders = rInt(8, 15), have = rInt(10, pots*spiders - 5);
-    let need = pots * spiders - have;
+function genNhanRoiTru(diff = 1) {
+    let pots = diff === 2 ? rInt(3, 8) : rInt(3, 5);
+    let spiders = diff === 2 ? rInt(8, 15) : rInt(4, 9);
     let total = pots * spiders;
-    let wrongs = [total, (pots - 1) * spiders - have, need + spiders].filter(w => w > 0 && w !== need).slice(0, 3);
-    while (wrongs.length < 3) { let cand = need + rInt(1, 5) * (rInt(0,1) ? 1 : -1); if (!wrongs.includes(cand) && cand !== need && cand > 0) wrongs.push(cand); }
+    let have = diff === 2 ? rInt(10, total - 5) : rInt(5, total - 3);
+    let need = total - have;
+    let wrongs = fillWrongs([total, (pots - 1) * spiders - have, need + spiders], need, 5);
     return {
         puzzleHTML: `<div class="puzzle-box">Lão lầm bầm: "Ta cần nấu ${pots} nồi súp, mỗi nồi cần đúng ${spiders} con nhện lửa. Sáng nay mới bắt được ${have} con. Phải đi lùng thêm bao nhiêu con nữa đây?"</div>`,
         choices: shuffle([{text: `${need} con`, isCorrect: true, wrongMsg: ""},{text: `${wrongs[0]} con`, isCorrect: false, wrongMsg: "Lão tức giận phóng dao: 'Tính ngu thế!'"},{text: `${wrongs[1]} con`, isCorrect: false, wrongMsg: "Lão phóng dao: 'Ngươi chưa trừ đi số nhện đang có à!'"},{text: `${wrongs[2]} con`, isCorrect: false, wrongMsg: "Lão phóng dao: 'Tính toán cẩn thận vào!'"}]),
@@ -439,9 +493,9 @@ function genNhanRoiTru() {
     };
 }
 
-function genBangNhan() {
-    let base = rInt(3, 9);
-    while (base === 7) base = rInt(3, 9);
+function genBangNhan(diff = 1) {
+    let base = diff === 2 ? rInt(3, 9) : rInt(2, 5);
+    while (diff === 2 && base === 7) base = rInt(3, 9);
     let startIdx = rInt(1, 3);
     let vals = [];
     for (let i = 0; i < 5; i++) vals.push(base * (startIdx + i));
@@ -453,7 +507,7 @@ function genBangNhan() {
         if (v > 0) extended.push(v);
     }
     let wrongs = extended.filter(v => v !== correct && !vals.includes(v)).slice(0, 3);
-    while (wrongs.length < 3) { let cand = correct + base * (rInt(2, 4)); if (!wrongs.includes(cand) && cand !== correct && cand > 0) wrongs.push(cand); }
+    wrongs = fillWrongs(wrongs, correct, base);
     let display = vals.map((v, i) => i === missingIdx ? "__" : String(v)).join(", ");
     return {
         puzzleHTML: `<div class="puzzle-box">Các bậc an toàn ghi: ${display}. Boo phải nhảy vào bậc số mấy?</div>`,
@@ -462,11 +516,11 @@ function genBangNhan() {
     };
 }
 
-function genChieuRongHCN() {
-    let halfP = rInt(10, 30), len = rInt(4, halfP - 3);
+function genChieuRongHCN(diff = 1) {
+    let halfP = diff === 2 ? rInt(10, 30) : rInt(8, 15);
+    let len = rInt(4, halfP - 3);
     let peri = halfP * 2, width = halfP - len;
-    let wrongs = [len, halfP, peri].filter(w => w !== width && w > 0);
-    while (wrongs.length < 3) { let cand = width + rInt(1, 5) * (rInt(0,1) ? 1 : -1); if (!wrongs.includes(cand) && cand !== width && cand > 0) wrongs.push(cand); }
+    let wrongs = fillWrongs([len, halfP, peri], width, 5);
     return {
         puzzleHTML: `<div class="puzzle-box">Nhỏ số giọt tinh chất bằng đúng CHIỀU RỘNG khu vườn lão phù thủy. Biết khu vườn hình chữ nhật có chu vi là ${peri}m, chiều dài ${len}m.</div>`,
         choices: shuffle([{text: `${width} giọt`, isCorrect: true, wrongMsg: ""},{text: `${wrongs[0]} giọt`, isCorrect: false, wrongMsg: "Bùm! Sai bét. Phải tính nửa chu vi rồi trừ chiều dài."},{text: `${wrongs[1]} giọt`, isCorrect: false, wrongMsg: "Bùm! Đó là nửa chu vi, chưa trừ chiều dài."},{text: `${wrongs[2]} giọt`, isCorrect: false, wrongMsg: "Bùm! Đó là chu vi, phải chia đôi trước."}]),
@@ -474,11 +528,23 @@ function genChieuRongHCN() {
     };
 }
 
-function genPhepToanLa1() {
+function genPhepToanLa1(diff = 1) {
+    if (diff !== 2) {
+        // Mức dễ: phép toán lạ một bước, số nhỏ
+        let a = rInt(2, 9), b = rInt(2, 9);
+        while (a === b) b = rInt(2, 9);
+        let correct = a * b + a;
+        let wrongs = fillWrongs([a * b, a * b + b, a + b], correct, 4);
+        return {
+            puzzleHTML: `<div class="puzzle-box">"Phép toán cổ đại: <strong>a △ b = a × b + a</strong>. Hãy tính <strong>${a} △ ${b}</strong> để mở nắp mộ!"</div>`,
+            choices: shuffle([{text: String(correct), isCorrect: true, wrongMsg: ""},{text: String(wrongs[0]), isCorrect: false, wrongMsg: "Sai! Đây chỉ là a×b, bạn quên cộng thêm a."},{text: String(wrongs[1]), isCorrect: false, wrongMsg: "Sai! Phải cộng thêm a, không phải cộng b."},{text: String(wrongs[2]), isCorrect: false, wrongMsg: "Sai! Đây chỉ là a+b, bạn quên nhân a×b."}]),
+            correctMsg: `Đúng! ${a}×${b} + ${a} = ${a*b} + ${a} = ${correct}. Nắp mộ mở ra!`
+        };
+    }
     let a = rInt(5, 20), b = rInt(3, 15);
     while (a === b) b = rInt(3, 15);
     let correct = b * a + a + b;
-    let wrongs = [a*b, a+b, b*a+a].filter(w => w !== correct && w > 0);
+    let wrongs = fillWrongs([a*b, a+b, b*a+a], correct, 6);
     return {
         puzzleHTML: `<div class="puzzle-box">"Phép toán cổ đại: <strong>a △ b = b × a + a + b</strong>. Hãy tính <strong>${a} △ ${b}</strong> để mở nắp mộ!"</div>`,
         choices: shuffle([{text: String(correct), isCorrect: true, wrongMsg: ""},{text: String(wrongs[0]), isCorrect: false, wrongMsg: "Sai! Bạn quên cộng a+b. (Đây chỉ là b×a)."},{text: String(wrongs[1]), isCorrect: false, wrongMsg: "Sai! Đây chỉ là a+b, bạn quên nhân b×a."},{text: String(wrongs[2]), isCorrect: false, wrongMsg: "Sai! Bạn thiếu cộng b. Tính lại đầy đủ các bước."}]),
@@ -486,13 +552,23 @@ function genPhepToanLa1() {
     };
 }
 
-function genTongHieu() {
+function genTongHieu(diff = 1) {
+    if (diff !== 2) {
+        // Mức dễ: biết thùng A và phần hơn, tìm thùng B (phép trừ)
+        let A = rInt(20, 90), D = rInt(5, A - 10);
+        let B = A - D;
+        let wrongs = fillWrongs([A + D, A, D], B, 8);
+        return {
+            puzzleHTML: `<div class="puzzle-box">"Thùng A chứa <strong>${A} lít</strong> rượu. Thùng B chứa ít hơn thùng A <strong>${D} lít</strong>. Hỏi thùng B chứa bao nhiêu lít?"</div>`,
+            choices: shuffle([{text: `${B} lít`, isCorrect: true, wrongMsg: ""},{text: `${wrongs[0]} lít`, isCorrect: false, wrongMsg: "Sai! 'Ít hơn' thì phải làm phép trừ, không phải cộng."},{text: `${wrongs[1]} lít`, isCorrect: false, wrongMsg: "Sai! Đây là số lít thùng A."},{text: `${wrongs[2]} lít`, isCorrect: false, wrongMsg: "Sai! Đây là phần chênh lệch, chưa phải thùng B."}]),
+            correctMsg: `Chính xác! B = ${A} - ${D} = ${B}. Khóa phép tan biến!`
+        };
+    }
     let D = rInt(50, 500);
     let B = rInt(100, 1500);
     let A = B + D, S = A + B;
     let correct = A;
-    let wrongs = [...new Set([B, S, D])].filter(w => w !== correct);
-    while (wrongs.length < 3) { let cand = correct + rInt(1, 15) * (rInt(0,1) ? 1 : -1); if (!wrongs.includes(cand) && cand !== correct && cand > 0) wrongs.push(cand); }
+    let wrongs = fillWrongs([B, S, D], correct, 15);
     return {
         puzzleHTML: `<div class="puzzle-box">"Tổng rượu trong hai thùng là <strong>${S} lít</strong>. Thùng A nhiều hơn thùng B <strong>${D} lít</strong>. Hãy cho biết thùng A chứa bao nhiêu lít?"</div>`,
         choices: shuffle([{text: `${correct} lít`, isCorrect: true, wrongMsg: ""},{text: `${wrongs[0]} lít`, isCorrect: false, wrongMsg: "Sai! Đây là số lít của thùng B."},{text: `${wrongs[1]} lít`, isCorrect: false, wrongMsg: "Sai! Đây là tổng hai thùng, không phải thùng A."},{text: `${wrongs[2]} lít`, isCorrect: false, wrongMsg: "Sai! Đây là hiệu số, không phải số lít thùng A."}]),
@@ -500,10 +576,20 @@ function genTongHieu() {
     };
 }
 
-function genTongTi() {
+function genTongTi(diff = 1) {
+    if (diff !== 2) {
+        // Mức dễ: gấp một số lên nhiều lần (phép nhân)
+        let r = rInt(2, 5), B = rInt(3, 12);
+        let A = r * B;
+        let wrongs = fillWrongs([B + r, B, A + B], A, 6);
+        return {
+            puzzleHTML: `<div class="puzzle-box">"Hoa cúc (B) có <strong>${B} bông</strong>. Hoa hồng (A) nhiều gấp <strong>${r} lần</strong> hoa cúc. Hỏi có bao nhiêu bông <strong>hoa hồng (A)</strong>?"</div>`,
+            choices: shuffle([{text: `${A} bông`, isCorrect: true, wrongMsg: ""},{text: `${wrongs[0]} bông`, isCorrect: false, wrongMsg: "Sai! 'Gấp' là phép nhân, không phải phép cộng."},{text: `${wrongs[1]} bông`, isCorrect: false, wrongMsg: "Sai! Đây là số hoa cúc (B)."},{text: `${wrongs[2]} bông`, isCorrect: false, wrongMsg: "Sai! Đây là tổng cả hai loại hoa."}]),
+            correctMsg: `Đúng! A = ${B} × ${r} = ${A}. Cổng vườn mở ra!`
+        };
+    }
     let r = rInt(2, 4), B = rInt(8, 30), A = r * B, S = A + B;
-    let wrongs = [...new Set([A, S, B*2])].filter(w => w !== B && w > 0);
-    while (wrongs.length < 3) { let cand = B + rInt(1, 5) * (rInt(0,1) ? 1 : -1); if (!wrongs.includes(cand) && cand !== B && cand > 0) wrongs.push(cand); }
+    let wrongs = fillWrongs([A, S, B*2], B, 5);
     return {
         puzzleHTML: `<div class="puzzle-box">"Tổng số hoa hồng (A) và hoa cúc (B) là <strong>${S} bông</strong>. Hoa hồng gấp <strong>${r} lần</strong> hoa cúc. Hỏi có bao nhiêu bông <strong>hoa cúc (B)</strong>?"</div>`,
         choices: shuffle([{text: `${B} bông`, isCorrect: true, wrongMsg: ""},{text: `${wrongs[0]} bông`, isCorrect: false, wrongMsg: "Sai! Đây là số hoa hồng (A), đề hỏi hoa cúc (B)."},{text: `${wrongs[1]} bông`, isCorrect: false, wrongMsg: "Sai! Đây là tổng, phải chia cho (tỉ lệ+1)."},{text: `${wrongs[2]} bông`, isCorrect: false, wrongMsg: `Sai! Hãy vẽ sơ đồ: B là 1 phần, A là ${r} phần, tổng ${r+1} phần.`}]),
@@ -511,7 +597,18 @@ function genTongTi() {
     };
 }
 
-function genChuyenGapBa() {
+function genChuyenGapBa(diff = 1) {
+    if (diff !== 2) {
+        // Mức dễ: tìm phần chênh lệch giữa hai bể (phép trừ)
+        let b = rInt(5, 40), a = rInt(b + 5, b + 40);
+        let correct = a - b;
+        let wrongs = fillWrongs([a + b, a, b], correct, 6);
+        return {
+            puzzleHTML: `<div class="puzzle-box">"Bể Jacky có <strong>${a} lít</strong> nước thần, bể Emma có <strong>${b} lít</strong>. Hỏi phải đổ thêm vào bể Emma bao nhiêu lít để hai bể bằng nhau?"</div>`,
+            choices: shuffle([{text: `${correct} lít`, isCorrect: true, wrongMsg: ""},{text: `${wrongs[0]} lít`, isCorrect: false, wrongMsg: "Sai! Muốn biết Emma thiếu bao nhiêu thì lấy hiệu, không phải tổng."},{text: `${wrongs[1]} lít`, isCorrect: false, wrongMsg: "Sai! Đây là số lít bể Jacky."},{text: `${wrongs[2]} lít`, isCorrect: false, wrongMsg: "Sai! Đây là số lít bể Emma đang có."}]),
+            correctMsg: `Chính xác! ${a} - ${b} = ${correct}. Đài phun nước phát sáng!`
+        };
+    }
     let x = rInt(5, 18);
     let a = rInt(x + 5, x + 30);
     let b = 3 * (a - x) - x;
@@ -520,8 +617,7 @@ function genChuyenGapBa() {
         b = 3 * (a - x) - x;
     }
     let halfDiff = Math.round((a - b) / 2);
-    let wrongs = [...new Set([a, halfDiff, Math.round(a / 3)])].filter(w => w > 0 && w !== x).slice(0, 3);
-    while (wrongs.length < 3) { let cand = x + rInt(2, 6) * (rInt(0,1) ? 1 : -1); if (!wrongs.includes(cand) && cand !== x && cand > 0) wrongs.push(cand); }
+    let wrongs = fillWrongs([a, halfDiff, Math.round(a / 3)], x, 6);
     return {
         puzzleHTML: `<div class="puzzle-box">"Bể Jacky có <strong>${a} lít</strong> nước thần, bể Emma có <strong>${b} lít</strong>. Jacky phải chuyển bao nhiêu lít sang Emma để lượng nước của Emma <strong>gấp 3 lần</strong> Jacky?"</div>`,
         choices: shuffle([{text: `${x} lít`, isCorrect: true, wrongMsg: ""},{text: `${wrongs[0]} lít`, isCorrect: false, wrongMsg: "Sai! Kiểm tra: số lít sau chuyển của Emma có gấp 3 Jacky không?"},{text: `${wrongs[1]} lít`, isCorrect: false, wrongMsg: "Sai! Đặt x là số lít chuyển, giải: (b+x)=3(a-x)."},{text: `${wrongs[2]} lít`, isCorrect: false, wrongMsg: "Sai! Tính toán cẩn thận lại phương trình."}]),
@@ -529,19 +625,41 @@ function genChuyenGapBa() {
     };
 }
 
-function genTongTiHieu() {
+function genTongTiHieu(diff = 1) {
+    if (diff !== 2) {
+        // Mức dễ: biết B và tỉ lệ, tính hiệu A-B (nhân rồi trừ)
+        let k = rInt(2, 5), B = rInt(4, 15);
+        let A = k * B, correct = A - B;
+        let wrongs = fillWrongs([A, B, A + B], correct, 5);
+        return {
+            puzzleHTML: `<div class="puzzle-box">"B là <strong>${B}</strong>. A gấp <strong>${k} lần</strong> B. Hãy tính <strong>hiệu của A và B</strong> (A - B) để thắp sáng ngọn đèn tháp!"</div>`,
+            choices: shuffle([{text: String(correct), isCorrect: true, wrongMsg: ""},{text: String(wrongs[0]), isCorrect: false, wrongMsg: "Sai! Đây là giá trị của A, còn phải trừ đi B."},{text: String(wrongs[1]), isCorrect: false, wrongMsg: "Sai! Đây là giá trị của B."},{text: String(wrongs[2]), isCorrect: false, wrongMsg: "Sai! Đây là tổng A+B, đề hỏi hiệu A-B."}]),
+            correctMsg: `Chính xác! A = ${B}×${k} = ${A}, A - B = ${A} - ${B} = ${correct}. Đèn tháp bừng sáng!`
+        };
+    }
     let k = rInt(2, 4), B = rInt(50, 200), A = k * B, S = A + B;
-    let diff = A - B;
-    let wrongs = [B, A, S].filter(w => w !== diff);
-    while (wrongs.length < 3) { let cand = diff + rInt(1, 5) * (rInt(0,1) ? 1 : -1); if (!wrongs.includes(cand) && cand !== diff && cand > 0) wrongs.push(cand); }
+    let diffAB = A - B;
+    let wrongs = fillWrongs([B, A, S], diffAB, 5);
     return {
         puzzleHTML: `<div class="puzzle-box">"Tổng của A và B là <strong>${S}</strong>. A gấp <strong>${k} lần</strong> B. Hãy tính <strong>hiệu của A và B</strong> (A - B) để thắp sáng ngọn đèn tháp!"</div>`,
-        choices: shuffle([{text: String(diff), isCorrect: true, wrongMsg: ""},{text: String(wrongs[0]), isCorrect: false, wrongMsg: "Sai! Đây là giá trị của B, không phải A-B."},{text: String(wrongs[1]), isCorrect: false, wrongMsg: "Sai! Đây là giá trị của A, không phải A-B."},{text: String(wrongs[2]), isCorrect: false, wrongMsg: "Sai! Đây là tổng, cần tìm hiệu A-B."}]),
-        correctMsg: `Chính xác! B=${S}÷${k+1}=${B}, A=${A}, A-B=${diff}. Đèn tháp bừng sáng!`
+        choices: shuffle([{text: String(diffAB), isCorrect: true, wrongMsg: ""},{text: String(wrongs[0]), isCorrect: false, wrongMsg: "Sai! Đây là giá trị của B, không phải A-B."},{text: String(wrongs[1]), isCorrect: false, wrongMsg: "Sai! Đây là giá trị của A, không phải A-B."},{text: String(wrongs[2]), isCorrect: false, wrongMsg: "Sai! Đây là tổng, cần tìm hiệu A-B."}]),
+        correctMsg: `Chính xác! B=${S}÷${k+1}=${B}, A=${A}, A-B=${diffAB}. Đèn tháp bừng sáng!`
     };
 }
 
-function genPhepToanLa2() {
+function genPhepToanLa2(diff = 1) {
+    if (diff !== 2) {
+        // Mức dễ: phép gương một bước, không lồng nhau
+        let x = rInt(3, 7), y = rInt(3, 7);
+        while (x === y) y = rInt(3, 7);
+        let correct = x * y - x - y + 1;
+        let wrongs = fillWrongs([x * y, x * y - x - y, x + y], correct, 5);
+        return {
+            puzzleHTML: `<div class="puzzle-box">"Phép gương cổ: <strong>a ◇ b = a × b - a - b + 1</strong>. Hãy tính <strong>${x} ◇ ${y}</strong> để dừng những tấm gương!"</div>`,
+            choices: shuffle([{text: String(correct), isCorrect: true, wrongMsg: ""},{text: String(wrongs[0]), isCorrect: false, wrongMsg: "Sai! Đây chỉ là a×b, còn phải trừ a, trừ b rồi cộng 1."},{text: String(wrongs[1]), isCorrect: false, wrongMsg: "Sai! Bạn quên cộng 1 ở cuối."},{text: String(wrongs[2]), isCorrect: false, wrongMsg: "Sai! Đây là a+b, hãy làm đúng theo công thức."}]),
+            correctMsg: `Chính xác! ${x}×${y} - ${x} - ${y} + 1 = ${correct}. Gương dừng xoay!`
+        };
+    }
     let x = rInt(3, 8), y = rInt(3, 8), z = rInt(4, 10);
     while (x === y) y = rInt(3, 8);
     let inner = x * y - x - y + 1;
@@ -549,8 +667,7 @@ function genPhepToanLa2() {
     let d1 = z * inner;
     let d2 = z * (x * y) - z - (x * y) + 1;
     let d3 = (z * inner + z + inner + 1);
-    let wrongs = [d1, d2, d3].filter(w => w !== correct && w > 0).slice(0, 3);
-    while (wrongs.length < 3) { let cand = correct + rInt(5, 25) * (rInt(0,1) ? 1 : -1); if (!wrongs.includes(cand) && cand !== correct && cand > 0) wrongs.push(cand); }
+    let wrongs = fillWrongs([d1, d2, d3], correct, 25);
     return {
         puzzleHTML: `<div class="puzzle-box">"Phép gương cổ: <strong>a ◇ b = a × b - a - b + 1</strong>. Hãy tính <strong>${z} ◇ (${x} ◇ ${y})</strong> để dừng những tấm gương!"</div>`,
         choices: shuffle([{text: String(correct), isCorrect: true, wrongMsg: ""},{text: String(wrongs[0]), isCorrect: false, wrongMsg: "Sai! Bạn quên trừ a và b. Tính từng bước cẩn thận."},{text: String(wrongs[1]), isCorrect: false, wrongMsg: `Sai! Tính nhầm bước trong ngoặc. Hãy tính lại ${x}◇${y} trước.`},{text: String(wrongs[2]), isCorrect: false, wrongMsg: "Sai! Nhầm dấu cộng và trừ trong công thức phép gương."}]),
@@ -558,13 +675,13 @@ function genPhepToanLa2() {
     };
 }
 
-function genDienTichHCN() {
-    let d = rInt(7, 16), r = rInt(4, 11);
-    while (d === r) r = rInt(4, 11);
+function genDienTichHCN(diff = 1) {
+    let d = diff === 2 ? rInt(7, 16) : rInt(3, 9);
+    let r = diff === 2 ? rInt(4, 11) : rInt(2, 6);
+    while (d === r) r = diff === 2 ? rInt(4, 11) : rInt(2, 6);
     let correct = d * r;
     let peri = (d + r) * 2;
-    let wrongs = [...new Set([peri, d + r, d * (r + 1)])].filter(w => w !== correct && w > 0).slice(0, 3);
-    while (wrongs.length < 3) { let cand = (d + rInt(0,1)) * r; if (!wrongs.includes(cand) && cand !== correct && cand > 0) wrongs.push(cand); }
+    let wrongs = fillWrongs([peri, d + r, d * (r + 1)], correct, 5);
     return {
         puzzleHTML: `<div class="puzzle-box">Trên tấm bản đồ cổ khắc một thửa ruộng hình chữ nhật: <strong>chiều dài ${d}m, chiều rộng ${r}m</strong>. Hãy tính <strong>diện tích</strong> thửa ruộng (m²) để xác định vị trí kho báu!</div>`,
         choices: shuffle([{text: `${correct} m²`, isCorrect: true, wrongMsg: ""},{text: `${wrongs[0]} m`, isCorrect: false, wrongMsg: "Bản đồ cháy! Đây là chu vi. Diện tích = dài × rộng."},{text: `${wrongs[1]} m²`, isCorrect: false, wrongMsg: "Bản đồ cháy! Đây là tổng dài+rộng. Phải nhân vào."},{text: `${wrongs[2]} m²`, isCorrect: false, wrongMsg: "Bản đồ cháy! Diện tích = chiều dài × chiều rộng. Tính lại đi."}]),
@@ -572,9 +689,10 @@ function genDienTichHCN() {
     };
 }
 
-function genXemGio() {
-    let h = rInt(7, 10), m = rInt(1, 3) * 15;
-    let d = rInt(3, 9) * 5;
+function genXemGio(diff = 1) {
+    let h = rInt(7, 10);
+    let m = diff === 2 ? rInt(1, 3) * 15 : 30;
+    let d = diff === 2 ? rInt(3, 9) * 5 : rInt(1, 2) * 10;
     let total = h * 60 + m + d;
     let eh = Math.floor(total / 60), em = total % 60;
     let displayH = eh > 12 ? eh - 12 : eh;
@@ -603,12 +721,11 @@ function genXemGio() {
     };
 }
 
-function genChuViHinhVuong() {
-    let side = rInt(5, 15);
+function genChuViHinhVuong(diff = 1) {
+    let side = diff === 2 ? rInt(5, 15) : rInt(3, 9);
     let correct = side * 4;
     let area = side * side;
-    let wrongs = [area, side + 4, side * 2].filter(w => w !== correct && w > 0);
-    while (wrongs.length < 3) { let cand = correct + rInt(1, 4) * (rInt(0,1) ? 1 : -1); if (!wrongs.includes(cand) && cand !== correct && cand > 0) wrongs.push(cand); }
+    let wrongs = fillWrongs([area, side + 4, side * 2], correct, 4);
     return {
         puzzleHTML: `<div class="puzzle-box">Sân đấu cổ đại có dạng <strong>hình vuông</strong>, mỗi cạnh dài <strong>${side}m</strong>. Các chiến binh đá cần biết <strong>chu vi</strong> sân đấu để dựng hàng rào bảo vệ!</div>`,
         choices: shuffle([{text: `${correct} m`, isCorrect: true, wrongMsg: ""},{text: `${wrongs[0]} m²`, isCorrect: false, wrongMsg: `Sai! Đây là diện tích (${side}×${side}). Chu vi = cạnh × 4.`},{text: `${wrongs[1]} m`, isCorrect: false, wrongMsg: "Sai! Chu vi = cạnh × 4, không phải cạnh + 4."},{text: `${wrongs[2]} m`, isCorrect: false, wrongMsg: "Sai! Đây mới là hai lần cạnh. Chu vi = cạnh × 4."}]),
@@ -616,15 +733,13 @@ function genChuViHinhVuong() {
     };
 }
 
-function genTimSoBiChia() {
-    let divisor = rInt(3, 8), quotient = rInt(4, 12), remainder = rInt(1, divisor - 1);
+function genTimSoBiChia(diff = 1) {
+    let divisor = diff === 2 ? rInt(3, 8) : rInt(2, 5);
+    let quotient = diff === 2 ? rInt(4, 12) : rInt(3, 9);
+    let remainder = rInt(1, divisor - 1);
     if (remainder < 1) remainder = 1;
     let dividend = divisor * quotient + remainder;
-    let wrong1 = divisor * quotient;
-    let wrong2 = divisor * (quotient + 1);
-    let wrong3 = divisor * quotient - remainder;
-    let wrongs = [wrong1, wrong2, wrong3].filter(w => w !== dividend && w > 0).slice(0, 3);
-    while (wrongs.length < 3) { let cand = dividend + divisor * (rInt(0,1) ? 1 : -1); if (!wrongs.includes(cand) && cand !== dividend && cand > 0) wrongs.push(cand); }
+    let wrongs = fillWrongs([divisor * quotient, divisor * (quotient + 1), divisor * quotient - remainder], dividend, divisor);
     return {
         puzzleHTML: `<div class="puzzle-box">Phép thuật khóa mật thất chỉ mở khi biết <strong>số bị chia</strong>. Biết <strong>số chia = ${divisor}</strong>, <strong>thương = ${quotient}</strong>, <strong>số dư = ${remainder}</strong>. Hỏi số bị chia là bao nhiêu?</div>`,
         choices: shuffle([{text: String(dividend), isCorrect: true, wrongMsg: ""},{text: String(wrongs[0]), isCorrect: false, wrongMsg: "Sai! Đây chỉ là số chia × thương. Thiếu cộng số dư."},{text: String(wrongs[1]), isCorrect: false, wrongMsg: "Sai! Công thức: Số bị chia = số chia × thương + số dư."},{text: String(wrongs[2]), isCorrect: false, wrongMsg: "Sai! Nhớ cộng số dư, không được trừ."}]),
@@ -652,15 +767,17 @@ const MATH_GENERATORS = {
 
 /* =====================================================================
    GENERATOR CHO 5 PHASE ĐÁNH BOSS (Đỉnh Tháp)
-   Phase 2 và 4 lấy câu tiếng Việt từ QUESTION_BANK nên thêm câu vào
-   topic tu-chi-dac-diem-doan / kieu-cau là boss cũng có đề mới.
+   Nhận diff như generator thường. Phase 2 và 4 lấy câu tiếng Việt từ
+   QUESTION_BANK nên thêm câu vào topic tu-chi-dac-diem-doan / kieu-cau
+   là boss cũng có đề mới.
    ===================================================================== */
-function genBossPhase1() {
-    let a = rInt(5, 20), b = rInt(3, 9), c = rInt(4, 12), d = rInt(2, 8);
+function genBossPhase1(diff = 1) {
+    let a = diff === 2 ? rInt(5, 20) : rInt(2, 9);
+    let b = diff === 2 ? rInt(3, 9) : rInt(2, 5);
+    let c = diff === 2 ? rInt(4, 12) : rInt(2, 9);
+    let d = diff === 2 ? rInt(2, 8) : rInt(2, 5);
     let correct = a * b + c * d;
-    let wrongs = [a*b + c*(d+1), (a+1)*b + c*d, a*(b+1) + c*d, (a+2)*b + c*d]
-        .filter(w => w !== correct && w > 0).slice(0, 3);
-    while (wrongs.length < 3) { let cand = correct + rInt(1, 12) * (rInt(0,1)?1:-1); if (!wrongs.includes(cand) && cand !== correct && cand > 0) wrongs.push(cand); }
+    let wrongs = fillWrongs([a*b + c*(d+1), (a+1)*b + c*d, a*(b+1) + c*d, (a+2)*b + c*d], correct, 12);
     return {
         puzzleHTML: `<div class="puzzle-box">🧪 Lão phù thủy vung đũa phép: "Mũi tên thần thứ nhất chỉ bắn trúng nếu ngươi tính đúng: <strong>${a} × ${b} + ${c} × ${d} = ?</strong>"</div>`,
         choices: shuffle([{text: String(correct), isCorrect: true, wrongMsg: ""},{text: String(wrongs[0]), isCorrect: false, wrongMsg: "Tia sét phản công! Nhớ nhân trước, cộng sau nhé."},{text: String(wrongs[1]), isCorrect: false, wrongMsg: "Tia sét phản công! Tính từng phép nhân rồi cộng lại."},{text: String(wrongs[2]), isCorrect: false, wrongMsg: "Tia sét phản công! Kiểm tra lại phép tính."}]),
@@ -668,20 +785,30 @@ function genBossPhase1() {
     };
 }
 
-function genBossPhase2() {
+function genBossPhase2(diff = 1) {
     return buildFromBank({
         topic: "tu-chi-dac-diem-doan",
         frame: q => `📜 Lão phù thủy niệm thần chú, một dòng chữ lửa hiện ra:<br>${q}<br>Trả lời đúng để nạp sức mạnh cho <strong>mũi tên thần thứ hai</strong>!`,
         successMsg: "🏹 Mũi tên thần thứ hai lao vút đi!"
-    });
+    }, diff);
 }
 
-function genBossPhase3() {
+function genBossPhase3(diff = 1) {
+    if (diff !== 2) {
+        // Mức dễ: biết tổng và một số, tìm số kia rồi nhân
+        let A = rInt(3, 10), B = rInt(2, 9);
+        let S = A + B;
+        let correct = A * B;
+        let wrongs = fillWrongs([S, A * (B + 1), (A + 1) * B], correct, 8);
+        return {
+            puzzleHTML: `<div class="puzzle-box">⚡ Lão phù thủy điên cuồng: "Hai con số bí ẩn có <strong>tổng là ${S}</strong>, và số thứ nhất là <strong>${A}</strong>. Mũi tên thứ ba cần <strong>tích của hai số</strong>. Hãy tính đi, nhóc con!"</div>`,
+            choices: shuffle([{text: String(correct), isCorrect: true, wrongMsg: ""},{text: String(wrongs[0]), isCorrect: false, wrongMsg: "Sét đánh! Đây là tổng, không phải tích."},{text: String(wrongs[1]), isCorrect: false, wrongMsg: `Sét đánh! Tìm số thứ hai trước: ${S} - ${A} = ?`},{text: String(wrongs[2]), isCorrect: false, wrongMsg: "Sét đánh! Tính lại phép nhân cho chuẩn."}]),
+            correctMsg: `🏹 Mũi tên thần thứ ba xuyên thủng khiên phép! (Số thứ hai = ${S} - ${A} = ${B}, Tích = ${A} × ${B} = ${correct})`
+        };
+    }
     let A = rInt(20, 60), B = rInt(10, A - 5), S = A + B, D = A - B;
     let correct = A * B;
-    let wrongs = [A + B, A * (A - D), (S + D) * (S - D) / 4 + rInt(5,20)]
-        .filter(w => w !== correct && w > 0).slice(0, 3);
-    while (wrongs.length < 3) { let cand = correct + rInt(1, 25) * (rInt(0,1)?1:-1); if (!wrongs.includes(cand) && cand !== correct && cand > 0) wrongs.push(cand); }
+    let wrongs = fillWrongs([A + B, A * (A - D), (S + D) * (S - D) / 4 + rInt(5,20)], correct, 25);
     return {
         puzzleHTML: `<div class="puzzle-box">⚡ Lão phù thủy điên cuồng: "Hai con số bí ẩn có <strong>tổng là ${S}</strong> và <strong>hiệu là ${D}</strong>. Mũi tên thứ ba cần <strong>tích của chúng</strong>. Hãy tính đi, nhóc con!"</div>`,
         choices: shuffle([{text: String(correct), isCorrect: true, wrongMsg: ""},{text: String(wrongs[0]), isCorrect: false, wrongMsg: "Sét đánh! Đây là tổng, không phải tích."},{text: String(wrongs[1]), isCorrect: false, wrongMsg: "Sét đánh! Tìm số lớn và số bé trước rồi nhân."},{text: String(wrongs[2]), isCorrect: false, wrongMsg: "Sét đánh! Số lớn = (Tổng+Hiệu)÷2, số bé = (Tổng-Hiệu)÷2."}]),
@@ -689,15 +816,32 @@ function genBossPhase3() {
     };
 }
 
-function genBossPhase4() {
+function genBossPhase4(diff = 1) {
     return buildFromBank({
         topic: "kieu-cau",
         frame: q => `🔮 Lão phù thủy gào lên, một dòng chữ lửa xuất hiện:<br>${q}<br>Xác định đúng để nạp sức mạnh cho <strong>mũi tên thần thứ tư</strong>!`,
         successMsg: "🏹 Mũi tên thần thứ tư lao thẳng vào ngực lão phù thủy!"
-    });
+    }, diff);
 }
 
-function genBossPhase5() {
+function genBossPhase5(diff = 1) {
+    if (diff !== 2) {
+        // Mức dễ: suy luận ngược 2 bước (nhân A rồi trừ D được E)
+        let x = rInt(3, 9), A = rInt(2, 5), D = rInt(2, 10);
+        let E = x * A - D;
+        while (E <= 0) { D = rInt(2, 10); E = x * A - D; }
+        let wrongs = fillWrongs([E + D, x * A, E - D], x, 4);
+        return {
+            puzzleHTML: `<div class="puzzle-box">💣 <strong>KÍCH HOẠT BOM ÁNH SÁNG!</strong><br>Lão phù thủy thều thào niệm lời nguyền cuối cùng:<br><em>"Hỡi con số bí ẩn kia, hãy thức tỉnh!<br>Nếu đem ngươi <strong>nhân với ${A}</strong>, rồi <strong>trừ đi ${D}</strong>,<br>sẽ nhận được kết quả là <strong>${E}</strong>."</em><br><br>Hãy tìm ra con số bí ẩn để kích nổ Bom Ánh Sáng!</div>`,
+            choices: shuffle([
+                {text: String(x), isCorrect: true, wrongMsg: ""},
+                {text: String(wrongs[0]), isCorrect: false, wrongMsg: `Bom rung lắc! Mẹo: lấy ${E} + ${D} = ${E+D}, rồi ÷ ${A}.`},
+                {text: String(wrongs[1]), isCorrect: false, wrongMsg: "Bom rung lắc dữ dội! Hãy suy luận ngược từ kết quả cuối cùng."},
+                {text: String(wrongs[2]), isCorrect: false, wrongMsg: "Bom rung lắc! Hãy tính ngược từng bước một cho chắc chắn."},
+            ]),
+            correctMsg: `💥 BOOM! Suy luận ngược: ${E} + ${D} = ${E+D} → ÷ ${A} = ${x}. Bom Ánh Sáng phát nổ!!!`
+        };
+    }
     let x = rInt(3, 12);
     let A = rInt(2, 5);
     let B = rInt(6, 20);
@@ -715,11 +859,7 @@ function genBossPhase5() {
     w2 = Math.round(w2 / A);
     let w3 = correct + rInt(1, 4) * (rInt(0,1) ? 1 : -1);
     if (w3 < 1) w3 = correct + rInt(1, 3);
-    let wrongs = [w1, w2, w3].filter(w => w !== correct && w > 0 && Number.isInteger(w)).slice(0, 3);
-    while (wrongs.length < 3) {
-        let cand = correct + rInt(1, 5) * (rInt(0,1) ? 1 : -1);
-        if (!wrongs.includes(cand) && cand !== correct && cand > 0 && Number.isInteger(cand)) wrongs.push(cand);
-    }
+    let wrongs = fillWrongs([w1, w2, w3], correct, 5);
     return {
         puzzleHTML: `<div class="puzzle-box">💣 <strong>KÍCH HOẠT BOM ÁNH SÁNG!</strong><br>Lão phù thủy thều thào niệm lời nguyền cuối cùng:<br><em>"Hỡi con số bí ẩn kia, hãy thức tỉnh!<br>Nếu đem ngươi <strong>nhân với ${A}</strong>, rồi <strong>cộng thêm ${B}</strong>,<br>được bao nhiêu <strong>chia cho ${C}</strong>, cuối cùng <strong>trừ đi ${D}</strong>,<br>sẽ nhận được kết quả là <strong>${E}</strong>."</em><br><br>Hãy tìm ra con số bí ẩn để kích nổ Bom Ánh Sáng!</div>`,
         choices: shuffle([
