@@ -63,7 +63,8 @@
    - Phòng 12: tong-ti              - Phòng 13: chuyen-gap-ba
    - Phòng 14: tong-ti-hieu         - Phòng 15: phep-toan-la-2
    - Phòng 22: dien-tich-hcn        - Phòng 23: xem-gio
-   - Phòng 24: chu-vi-hinh-vuong    - Phòng 26: tim-so-bi-chia
+   - Phòng 24: chu-vi-hinh-vuong    - Phòng 26: tim-so-bi-chia + nhan-hai-chu-so
+   (một phòng có thể dùng nhiều topic - khai báo mảng trong ROOM_PUZZLES)
 
    ---------------------------------------------------------------------
    4. NẠP ĐỀ TỪ FILE PDF/DOCX (thư mục de-bai/)
@@ -186,6 +187,13 @@ const MATH_SPECS = {
         levels: { 1: "số chia 2-5, thương 3-9", 2: "số chia 3-8, thương 4-12" },
         notes: "Nhiễu: quên cộng dư, trừ dư, lệch một thương. Luôn giữ ràng buộc dư < số chia.",
         source: "Đề gốc của game"
+    },
+    "nhan-hai-chu-so": {
+        name: "Nhân số có hai chữ số với số có một chữ số (đặt tính rồi tính)",
+        example: "27 × 5 = 135 (7×5=35, viết 5 nhớ 3; 2×5=10, thêm 3 là 13)",
+        levels: { 1: "không nhớ (hàng đơn vị × thừa số ≤ 9), thừa số 2-4", 2: "có nhớ ở hàng đơn vị, thừa số 3-9" },
+        notes: "Nhiễu: quên cộng số nhớ vào hàng chục (lỗi phổ biến nhất), lệch một bảng nhân (±thừa số), chỉ nhân hàng đơn vị giữ nguyên hàng chục. Kèm câu tĩnh toan-001 (sắp xếp 4 bước quy trình đặt tính) trộn 50/50 với đề số.",
+        source: "de-bai/toan/PHIẾU LUYỆN NHÂN SỐ CÓ HAI CHỮ SỐ.pdf + phiếu học tập .jpg (CLB Toán HaHa&QQ)"
     },
     /* Dạng riêng của trận boss (không gắn phòng thường) */
     "boss-1": {
@@ -460,9 +468,23 @@ const TV_MATERIALS = {
    Chỉ dành cho câu KHÔNG tổng quát hóa được thành dạng/khuôn (đề đố
    vui một-lần, câu gắn chặt với ngữ cảnh riêng...). Viết theo schema
    đầy đủ: {id, subject, topic, difficulty, question, choices,
-   correctIndex, wrongHints, explain}. Hiện chưa có câu nào.
+   correctIndex, wrongHints, explain}.
    ===================================================================== */
-const STATIC_QUESTIONS = [];
+const STATIC_QUESTIONS = [
+    {
+        id: "toan-001", subject: "toan", topic: "nhan-hai-chu-so", difficulty: 1,
+        question: "Bốn bước của quy trình nhân số có hai chữ số với số có một chữ số:<br>" +
+                  "(a) Nhân với chữ số hàng chục rồi cộng số vừa nhớ.<br>" +
+                  "(b) Đặt tính theo cột dọc, thừa số một chữ số thẳng với hàng đơn vị.<br>" +
+                  "(c) Nhân với chữ số hàng đơn vị, nếu kết quả ≥ 10 thì viết hàng đơn vị và nhớ số chục.<br>" +
+                  "(d) Viết kết quả cuối cùng theo đúng hàng.<br>" +
+                  "Thứ tự <strong>ĐÚNG</strong> của quy trình là?",
+        choices: ["(b) → (c) → (a) → (d)", "(b) → (a) → (c) → (d)", "(c) → (b) → (a) → (d)", "(b) → (c) → (d) → (a)"],
+        correctIndex: 0,
+        wrongHints: ["", "Sai! Phải nhân hàng ĐƠN VỊ trước rồi mới đến hàng chục.", "Sai! Phải đặt tính trước rồi mới bắt đầu nhân chứ.", "Sai! Viết kết quả là bước cuối cùng."],
+        explain: "Quy trình đúng: đặt tính → nhân hàng đơn vị (viết và nhớ nếu ≥ 10) → nhân hàng chục rồi cộng số nhớ → viết kết quả theo đúng hàng."
+    },
+];
 
 /* =====================================================================
    BIÊN DỊCH QUESTION_BANK (tự động - không sửa tay)
@@ -530,12 +552,15 @@ function buildFromBank(cfg, difficulty = 1) {
 
 function getPuzzle(cfg, difficulty = 1) {
     if (typeof cfg === "string") cfg = { topic: cfg };
-    const gen = MATH_GENERATORS[cfg.topic];
-    const hasBank = QUESTION_BANK.some(q => q.topic === cfg.topic);
+    // Một phòng có thể khai báo nhiều topic (mảng) - chọn ngẫu nhiên một topic mỗi lượt
+    const topic = Array.isArray(cfg.topic) ? cfg.topic[rInt(0, cfg.topic.length - 1)] : cfg.topic;
+    const eff = Object.assign({}, cfg, { topic: topic });
+    const gen = MATH_GENERATORS[topic];
+    const hasBank = QUESTION_BANK.some(q => q.topic === topic);
     let p;
-    if (gen && hasBank) p = rInt(0, 1) === 0 ? gen(difficulty) : buildFromBank(cfg, difficulty);
+    if (gen && hasBank) p = rInt(0, 1) === 0 ? gen(difficulty) : buildFromBank(eff, difficulty);
     else if (gen) p = gen(difficulty);
-    else p = buildFromBank(cfg, difficulty);
+    else p = buildFromBank(eff, difficulty);
     if (cfg.fallback) p.fallbackRoom = cfg.fallback;
     return p;
 }
@@ -829,6 +854,32 @@ function genTimSoBiChia(diff = 1) {
     };
 }
 
+function genNhanHaiChuSo(diff = 1) {
+    let m, t, u;
+    if (diff !== 2) {
+        m = rInt(2, 4);
+        u = rInt(0, Math.floor(9 / m));      // hàng đơn vị nhân không nhớ
+        t = rInt(1, 9);
+    } else {
+        m = rInt(3, 9);
+        u = rInt(Math.ceil(10 / m), 9);      // ép có nhớ ở hàng đơn vị
+        t = rInt(1, 9);
+    }
+    const N = t * 10 + u;
+    const correct = N * m;
+    const um = u * m, carry = Math.floor(um / 10);
+    const forgetCarry = (t * m) * 10 + (um % 10);   // quên cộng số nhớ vào hàng chục
+    const unitsOnly = t * 10 + um;                   // chỉ nhân hàng đơn vị, giữ nguyên hàng chục
+    const wrongs = fillWrongs([forgetCarry, correct + m, unitsOnly, correct - m], correct, m * 2);
+    return {
+        puzzleHTML: `<div class="puzzle-box">Những con số ma thuật xếp thành phép tính: <strong>${N} × ${m}</strong>. Hãy đặt tính rồi tính để phá giải phong ấn!</div>`,
+        choices: shuffle([{text: String(correct), isCorrect: true, wrongMsg: ""},{text: String(wrongs[0]), isCorrect: false, wrongMsg: "Sai! Hình như bạn quên cộng số NHỚ vào hàng chục."},{text: String(wrongs[1]), isCorrect: false, wrongMsg: "Sai! Kiểm tra lại bảng nhân, tính từng hàng cẩn thận nhé."},{text: String(wrongs[2]), isCorrect: false, wrongMsg: "Sai! Nhớ nhân cả chữ số hàng chục rồi cộng số nhớ."}]),
+        correctMsg: carry > 0
+            ? `Chính xác! ${u} × ${m} = ${um}, viết ${um % 10} nhớ ${carry}; ${t} × ${m} = ${t*m}, thêm ${carry} là ${t*m + carry}. Vậy ${N} × ${m} = ${correct}!`
+            : `Chính xác! ${u} × ${m} = ${um}; ${t} × ${m} = ${t*m}. Vậy ${N} × ${m} = ${correct}!`
+    };
+}
+
 /* Bảng tra topic toán → generator (engine dùng qua getPuzzle) */
 const MATH_GENERATORS = {
     "thu-tu-phep-tinh": genThuTuPhepTinh,
@@ -844,7 +895,8 @@ const MATH_GENERATORS = {
     "dien-tich-hcn": genDienTichHCN,
     "xem-gio": genXemGio,
     "chu-vi-hinh-vuong": genChuViHinhVuong,
-    "tim-so-bi-chia": genTimSoBiChia
+    "tim-so-bi-chia": genTimSoBiChia,
+    "nhan-hai-chu-so": genNhanHaiChuSo
 };
 
 /* =====================================================================

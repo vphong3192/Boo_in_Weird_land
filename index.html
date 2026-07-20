@@ -602,7 +602,7 @@
             24: { topic: "chu-vi-hinh-vuong" },
             25: { topic: "kieu-cau",
                   frame: q => `Những cuốn sách biết nói thì thầm thách đố: ${q}` },
-            26: { topic: "tim-so-bi-chia" }
+            26: { topic: ["tim-so-bi-chia", "nhan-hai-chu-so"] }
         };
 
         /* ================= CƠ SỞ DỮ LIỆU CÁC PHÒNG ================= */
@@ -1235,7 +1235,7 @@
                 renderText: () => {
                     if (state.flags.matThatSoHocSolved) return `<p>Mật thất đã mở. Trên bệ đá có một chiếc <strong>Nhẫn Thông Thái</strong> lấp lánh.</p>`;
                     let q = state.q[26];
-                    return `<p>Một căn phòng bí mật với những con số bay lơ lửng trong không trung. Chúng sắp xếp thành phép chia và thách đố Boo:</p>${q.puzzleHTML}`;
+                    return `<p>Một căn phòng bí mật với những con số bay lơ lửng trong không trung. Chúng liên tục xếp thành những phép tính mới và thách đố Boo:</p>${q.puzzleHTML}`;
                 },
                 renderChoices: () => {
                     let q = state.q[26];
